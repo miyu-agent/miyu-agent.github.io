@@ -1384,13 +1384,13 @@ $('#sticker').addEventListener('click', e => { faceI = (faceI + 1) % FACES.lengt
 
 /* ================= language ================= */
 const langBtns = $$('nav .seg button[data-lang]');
-function setLang(l){
+function setLang(l, chosen){
   lang = l; root.dataset.lang = l; root.lang = l === 'zh' ? 'zh-CN' : 'en';
   press(langBtns, langBtns.find(b => b.dataset.lang === l));
-  try { localStorage.setItem('miyu-lang', l); } catch (e) {}
+  if (chosen) { try { localStorage.setItem('miyu-lang-chosen', l); } catch (e) {} }
   onLang.forEach(f => f());
 }
-langBtns.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+langBtns.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang, true)));
 
 /* ================= install: the bundle, or the core plus what you pick ================= */
 const SCRIPT = {
@@ -1567,9 +1567,11 @@ const themeChanged = () => { readColors(); if (!shadeTouched) shade = pageDark()
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeChanged);
 new MutationObserver(themeChanged).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
 
-let saved = null; try { saved = localStorage.getItem('miyu-lang'); } catch (e) {}
+let saved = null; try { saved = localStorage.getItem('miyu-lang-chosen'); } catch (e) {}
 readColors();
-setLang(saved === 'en' ? 'en' : 'zh');
+// 手动选过的照选的；没选过的照浏览器语言：中文的显示中文，别的显示英文
+const browserLang = ((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase();
+setLang(saved === 'en' || saved === 'zh' ? saved : browserLang.startsWith('zh') ? 'zh' : 'en');
 initiallyShown.forEach(el => revealers.forEach(f => f(el)));
 (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { heroField.layout(); }).catch(() => {});
 requestAnimationFrame(loop);
