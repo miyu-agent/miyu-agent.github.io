@@ -814,6 +814,8 @@ const reel = $('#reel');
 reel.innerHTML = SHOTS.map((s, i) => `<button class="slide" data-i="${i}"><img src="assets/${s.k}.webp" alt="" draggable="false" decoding="async"${i > 1 ? ' loading="lazy"' : ''}></button>`).join('');
 const slides = $$('#reel .slide');
 let shot = 0;
+// 第 i 张居中时 reel 该滚到哪：照它和第一张的距离算（offsetLeft 是相对 .tilt 的，不是相对 reel 的，宽屏上差出半屏）
+const shotAt = i => slides[i].offsetLeft - slides[0].offsetLeft;
 function markShot(i){
   shot = i;
   slides.forEach((s, j) => { s.classList.toggle('on', j === i); s.setAttribute('aria-label', L(SHOTS[j].cap)); });
@@ -821,17 +823,15 @@ function markShot(i){
 }
 function goShot(i, smooth = true){
   i = Math.max(0, Math.min(SHOTS.length - 1, i));
-  const s = slides[i];
-  reel.scrollTo({ left: s.offsetLeft - (reel.clientWidth - s.offsetWidth) / 2, behavior: smooth && !reduce ? 'smooth' : 'auto' });
+  reel.scrollTo({ left: shotAt(i), behavior: smooth && !reduce ? 'smooth' : 'auto' });
   markShot(i);
 }
 let scrollT = 0;
 reel.addEventListener('scroll', () => {
   cancelAnimationFrame(scrollT);
   scrollT = requestAnimationFrame(() => {
-    const mid = reel.scrollLeft + reel.clientWidth / 2;
     let best = 0, d = Infinity;
-    slides.forEach((s, j) => { const dj = Math.abs(s.offsetLeft + s.offsetWidth / 2 - mid); if (dj < d){ d = dj; best = j; } });
+    slides.forEach((s, j) => { const dj = Math.abs(shotAt(j) - reel.scrollLeft); if (dj < d){ d = dj; best = j; } });
     if (best !== shot) markShot(best);
   });
 }, { passive: true });
