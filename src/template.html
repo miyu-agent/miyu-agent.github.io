@@ -441,9 +441,7 @@ footer{background:var(--ink);color:var(--paper);position:relative;z-index:1}
         <span lang="en"><span class="ph">User-friendly</span><i>/</i><span class="ph">Ultra-light</span><i>/</i><span class="ph">Full-featured</span></span>
       </p>
       <div class="cta" id="dl">
-        <a class="btn" href="#install" data-os="linux">Linux</a>
-        <a class="btn" href="#install" data-os="macos">macOS</a>
-        <a class="btn" href="#install" data-os="windows">Windows</a>
+        <a class="btn solid" id="dl-btn" href="#"><span lang="zh">下载 <span data-os-name>Linux</span> 版</span><span lang="en">Download for <span data-os-name>Linux</span></span></a>
       </div>
       <div class="plat"><span lang="zh">首个正式版即将发布</span><span lang="en">First release coming soon</span></div>
     </div>
@@ -682,26 +680,6 @@ footer{background:var(--ink);color:var(--paper);position:relative;z-index:1}
     <span class="k">return</span> f"Hello, {args['name']}!"</pre>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- install -->
-      <section class="chap" id="install" data-zh="安装" data-en="Install">
-        <header class="fh">
-          <h2><span lang="zh">一行命令，装好就能用。</span><span lang="en">One line, and you're set.</span></h2>
-          <p><span lang="zh">首个正式版发布后，下面的命令就能用了。</span><span lang="en">These commands work once the first release is out.</span></p>
-        </header>
-        <div class="play setup rv-glyph">
-          <div class="bar2">
-            <div class="seg" role="group" aria-label="平台 / Platform" id="os">
-              <button data-os="linux" aria-pressed="true">Linux</button><button data-os="macos" aria-pressed="false">macOS</button><button data-os="windows" aria-pressed="false">Windows</button>
-            </div>
-            <div class="seg" role="group" aria-label="装法 / How" id="way">
-              <button data-w="bundle" aria-pressed="true"><span lang="zh">整合包</span><span lang="en">Bundle</span></button><button data-w="pick" aria-pressed="false"><span lang="zh">核心 + 自选</span><span lang="en">Core + pick</span></button>
-            </div>
-          </div>
-          <div class="setup-body" id="setup"></div>
-          <p class="tiny"><a href="https://github.com/miyu-agent/miyu/releases/latest" target="_blank" rel="noopener"><span lang="zh">所有版本和压缩包 ↗</span><span lang="en">All releases and archives ↗</span></a></p>
         </div>
       </section>
 
@@ -1392,73 +1370,14 @@ function setLang(l, chosen){
 }
 langBtns.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang, true)));
 
-/* ================= install: the bundle, or the core plus what you pick ================= */
-const SCRIPT = {
-  sh: 'curl -fsSL https://raw.githubusercontent.com/miyu-agent/miyu/main/packaging/install.sh | sh',
-  ps: '& ([scriptblock]::Create((irm https://raw.githubusercontent.com/miyu-agent/miyu/main/packaging/install.ps1)))',
-};
-const HEADS = [['tui', { zh: '终端界面', en: 'Terminal UI' }, 'miyu-tui'], ['web', { zh: '网页界面', en: 'Web UI' }, 'miyu-webui'], ['tray', { zh: '托盘', en: 'Tray app' }, 'miyu-applet']];
-const EXTRAS = [['miyu-im', { zh: '接入通讯平台', en: 'Messaging' }], ['miyu-memes', { zh: '表情包', en: 'Stickers' }], ['miyu-embed', { zh: '语义搜索', en: 'Semantic search' }], ['miyu-render', { zh: '渲染成图片', en: 'Render to images' }]];
-let os = 'linux', way = 'bundle';
-const picked = new Set(['tui']);
-const cmdHTML = c => `<div class="cmd"><code>${esc(c)}</code><button class="copy">copy</button></div>`;
-const altHTML = rows => `<ul class="alt">${rows.map(([t, c, link]) => `<li><span>${esc(L(t))}</span>${c ? `<code>${esc(c)}</code>` : ''}${link || ''}</li>`).join('')}</ul>`;
-function bundleHTML(){
-  const what = os === 'windows' ? { zh: '核心、终端界面、网页界面一次装齐。在 PowerShell 里运行：', en: 'Core, terminal UI and web UI in one go. Run it in PowerShell:' }
-    : { zh: '核心、终端界面、网页界面一次装齐：', en: 'Core, terminal UI and web UI in one go:' };
-  let h = `<p class="lead">${esc(L(what))}</p>` + cmdHTML(os === 'windows' ? SCRIPT.ps : SCRIPT.sh);
-  if (os === 'linux') h += altHTML([[{ zh: 'Arch Linux（AUR，含托盘）', en: 'Arch Linux (AUR, with the tray app)' }, 'paru -S miyu-agent']]);
-  if (os === 'macos') h += altHTML([[{ zh: 'Homebrew', en: 'Homebrew' }, 'brew install miyu-agent/miyu/miyu-agent'], [{ zh: '托盘', en: 'Tray app' }, 'brew install --cask miyu-agent/miyu/miyu-applet']]);
-  return h;
-}
-function pickHTML(){
-  const step = (n, t, body) => `<div class="step"><h4><i>${n}</i>${esc(L(t))}</h4>${body}</div>`;
-  const chip = (k, name, sub) => `<button class="chip${picked.has(k) ? ' on' : ''}" data-k="${k}" aria-pressed="${picked.has(k)}">${esc(L(name))}<span class="pk">${esc(sub)}</span></button>`;
-  const heads = os === 'windows' ? [] : HEADS;
-  const core = os === 'linux' ? cmdHTML('paru -S miyu-core') + `<p class="none">${esc(L({ zh: '这是 Arch Linux（AUR）的装法；别的发行版目前用整合包。', en: 'This is for Arch Linux (AUR); other distros use the bundle for now.' }))}</p>`
-    : os === 'macos' ? cmdHTML('brew install miyu-agent/miyu/miyu-core')
-    : cmdHTML(SCRIPT.ps) + `<p class="none">${esc(L({ zh: 'Windows 目前只有整合包，界面已经带上了，下一步只挑扩展。', en: 'Windows only has the bundle for now; the UIs come with it, so just pick extras next.' }))}</p>`;
-  const picks = `<div class="picks">`
-    + (heads.length ? `<span class="grp-n">${esc(L({ zh: '界面', en: 'Interfaces' }))}</span><div class="chips">${heads.map(([k, n, id]) => chip(k, n, id)).join('')}</div>` : '')
-    + `<span class="grp-n">${esc(L({ zh: '扩展', en: 'Extras' }))}</span><div class="chips">${EXTRAS.map(([id, n]) => chip(id, n, id)).join('')}</div></div>`;
-  const cmds = [];
-  const hs = heads.filter(([k]) => picked.has(k));
-  if (os === 'linux' && hs.length) cmds.push('paru -S ' + hs.map(h => h[2]).join(' '));
-  if (os === 'macos'){
-    const f = hs.filter(([k]) => k !== 'tray').map(h => 'miyu-agent/miyu/' + h[2]);
-    if (f.length) cmds.push('brew install ' + f.join(' '));
-    if (picked.has('tray')) cmds.push('brew install --cask miyu-agent/miyu/miyu-applet');
-  }
-  const ex = EXTRAS.filter(([id]) => picked.has(id)).map(e => e[0]);
-  if (ex.length) cmds.push('miyu pkg -S ' + ex.join(' '));
-  const run = cmds.length ? cmds.map(cmdHTML).join('') : `<p class="none">${esc(L({ zh: '什么都不选也能用：只用命令行，比如 miyu ask "你好"。', en: 'Nothing picked works too: just the command line, e.g. miyu ask "hi".' }))}</p>`;
-  return step(1, { zh: '装核心', en: 'Install the core' }, core) + step(2, { zh: '挑你要的', en: 'Pick what you want' }, picks) + step(3, { zh: '装上它们', en: 'Install them' }, run);
-}
-function renderSetup(){
-  $('#setup').innerHTML = way === 'bundle' ? bundleHTML() : pickHTML();
-  $('#setup').querySelectorAll('.chip[data-k]').forEach(b => b.addEventListener('click', () => {
-    const k = b.dataset.k; picked.has(k) ? picked.delete(k) : picked.add(k); renderSetup();
-    $(`#setup .chip[data-k="${k}"]`).focus();
-  }));
-}
-const osBtns = $$('#os button'), wayBtns = $$('#way button'), dlBtns = $$('#dl [data-os]');
-function setOS(o){
-  os = o; press(osBtns, osBtns.find(b => b.dataset.os === o));
-  dlBtns.forEach(b => b.classList.toggle('solid', b.dataset.os === o));
-  renderSetup();
-}
-osBtns.forEach(b => b.addEventListener('click', () => setOS(b.dataset.os)));
-wayBtns.forEach(b => b.addEventListener('click', () => { way = b.dataset.w; press(wayBtns, b); renderSetup(); }));
-dlBtns.forEach(b => b.addEventListener('click', () => setOS(b.dataset.os)));
-onLang.push(renderSetup);
+/* ================= download: one button for the visitor's system ================= */
+// 等打包：发行包出来以后把这三个地址换成真的
+const DOWNLOADS = { linux: '#', macos: '#', windows: '#' };
+const OS_NAME = { linux: 'Linux', macos: 'macOS', windows: 'Windows' };
 const ua = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent;
-setOS(/win/i.test(ua) ? 'windows' : /mac|iphone|ipad/i.test(ua) ? 'macos' : 'linux');
-$('#setup').addEventListener('click', async e => {
-  const b = e.target.closest('.copy'); if (!b) return;
-  try { await navigator.clipboard.writeText(b.previousElementSibling.textContent); b.textContent = 'copied'; }
-  catch (err) { getSelection().selectAllChildren(b.previousElementSibling); b.textContent = 'ctrl+c'; }
-  setTimeout(() => { b.textContent = 'copy'; }, 1600);
-});
+const os = /win/i.test(ua) ? 'windows' : /mac|iphone|ipad/i.test(ua) ? 'macos' : 'linux';
+$('#dl-btn').href = DOWNLOADS[os];
+$$('#dl-btn [data-os-name]').forEach(el => { el.textContent = OS_NAME[os]; });
 
 $$('.cli').forEach(b => b.addEventListener('click', async () => {
   const cp = b.querySelector('.cp');
