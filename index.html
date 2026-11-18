@@ -1,0 +1,1588 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<title>Miyu</title>
+<link rel="icon" href="assets/logo/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="assets/logo/logo-180.png">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wdth,wght@75..112.5,300..800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: cold monochrome. Hero (glyph logo, the name as a small title, three traits as the big line under it); a full-bleed carousel of the real UIs;
+   then a sticky chapter rail beside a column of chapters: lightweight chart, then seven playable features. */
+:root{
+  --paper:#f6f7f8; --ink:#0d0e10; --mute:#6f737a; --faint:#b4b7bc; --line:#dfe1e4; --panel:#eceef0; --card:#ffffff; --dot:#d7dade;
+  --edge:rgba(13,14,16,.55); --wash:rgba(13,14,16,.035); --halo:rgba(13,14,16,.07); --barglow:none; --grain:.035;
+  --f-mono:"Martian Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --f-sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --wrap:1240px; --ease:cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0a0b0c; --ink:#eceef0; --mute:#878b92; --faint:#484b50; --line:#222428; --panel:#151618; --card:#101113; --dot:#1e2023;
+  --edge:rgba(255,255,255,.5); --wash:rgba(255,255,255,.05); --halo:rgba(255,255,255,.1); --barglow:0 0 18px rgba(255,255,255,.45); --grain:.06; color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#0a0b0c; --ink:#eceef0; --mute:#878b92; --faint:#484b50; --line:#222428; --panel:#151618; --card:#101113; --dot:#1e2023;
+  --edge:rgba(255,255,255,.5); --wash:rgba(255,255,255,.05); --halo:rgba(255,255,255,.1); --barglow:0 0 18px rgba(255,255,255,.45); --grain:.06; color-scheme:dark}
+
+:root:not([data-lang="en"]) [lang="en"],:root[data-lang="en"] [lang="zh"]{display:none!important}
+
+*{box-sizing:border-box}
+html{overflow-x:clip}   /* the glyph logo's halo reaches past the edge on phones */
+/* light that follows the pointer, and a film grain over everything */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(760px circle at var(--gx,70%) var(--gy,-10%),var(--wash),transparent 62%)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;opacity:var(--grain);background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-sans);font-size:15px;line-height:1.6;overflow-x:clip}
+a{color:inherit}
+button,input{font:inherit;color:inherit}
+img,video{max-width:100%;display:block}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.wrap{max-width:var(--wrap);margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mark{display:block;color:var(--ink)}
+.cur{display:inline-block;width:.58em;height:1em;background:currentColor;vertical-align:-.15em;margin-left:.06em;animation:blink 1.06s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.mono{font-family:var(--f-mono)}
+.tiny{font-family:var(--f-mono);font-size:10.5px;color:var(--mute)}
+
+.seg{display:inline-flex;border:1px solid var(--line);font-family:var(--f-mono);font-size:11px;flex-wrap:wrap;background:var(--card)}
+.seg button{all:unset;cursor:pointer;padding:5px 11px;color:var(--mute);transition:background .15s,color .15s}
+.seg button [lang="zh"],.chip [lang="zh"]{font-family:var(--f-sans)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button[hidden]{display:none}
+.seg button:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{all:unset;cursor:pointer;font-size:12.5px;padding:6px 12px;border:1px solid var(--line);background:var(--card);transition:border-color .15s,background .15s,color .15s;line-height:1.4}
+.chip:hover{border-color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.chip.mono{font-family:var(--f-mono);font-size:11.5px}
+
+/* nav */
+.topnav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:18px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--f-mono);font-weight:700;font-size:14px;letter-spacing:-.02em}
+.brand .mark{width:28px;height:28px}
+.nav-r{display:flex;align-items:center;gap:22px}
+.links{display:flex;gap:20px;font-size:12px;font-family:var(--f-mono)}
+.links a{text-decoration:none;color:var(--mute);transition:color .15s}
+.links a:hover{color:var(--ink)}
+
+/* hero */
+.hero{display:flex;flex-direction:column;align-items:center;gap:40px;padding-block:28px 72px;text-align:center}
+.hero-t{display:flex;flex-direction:column;align-items:center;gap:28px;width:100%;max-width:960px;min-width:0}
+h1{font-family:var(--f-mono);font-weight:500;font-size:12.5px;line-height:1;letter-spacing:.26em;text-transform:uppercase;color:var(--mute);margin:0 -.26em 0 0}
+.traits{font-weight:900;font-size:clamp(21px,5.6vw,40px);line-height:1.3;letter-spacing:.04em;margin:-8px 0 0}
+.traits [lang="en"]{letter-spacing:-.01em;font-size:.74em}
+.traits i{font-style:normal;font-weight:400;color:var(--faint);margin:0 .35em}
+.traits .ph{display:inline-block;white-space:nowrap}
+h1 .ph{display:inline-block;white-space:nowrap}
+.cta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.btn{font-family:var(--f-mono);font-size:13px;font-weight:600;text-decoration:none;padding:13px 20px;border:1px solid var(--ink);display:inline-flex;align-items:center;gap:10px;transition:background .15s,color .15s}
+.btn.solid{background:var(--ink);color:var(--paper)}
+.btn.solid:hover{background:transparent;color:var(--ink)}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn [lang="zh"]{font-family:var(--f-sans)}
+.plat{font-size:12px;color:var(--mute);margin-top:-8px}
+.stage::before{content:"";position:absolute;inset:-14%;background:radial-gradient(closest-side,var(--halo),transparent);pointer-events:none}
+.stage{position:relative;width:100%;max-width:min(500px,54vh);aspect-ratio:1}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+
+/* screens: a full-bleed carousel of the real UIs, neighbours peeking in; rises into place once when it scrolls into view */
+.screens{position:relative;padding-block:24px 40px}
+.tilt{position:relative;transition:opacity .9s var(--ease),transform 1.1s var(--ease)}
+.js .screens:not(.in) .tilt{opacity:0;transform:translateY(36px)}
+.reel{--sw:min(1080px,76vw);display:flex;gap:28px;margin-inline:calc(50% - 50vw);padding:0 calc(50vw - var(--sw) / 2) 70px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.reel::-webkit-scrollbar{display:none}
+.reel.drag{scroll-snap-type:none;cursor:grabbing}
+.slide{all:unset;flex:0 0 var(--sw);aspect-ratio:2479/1334;scroll-snap-align:center;cursor:pointer;border:1px solid var(--line);background:var(--panel);box-shadow:0 50px 120px -50px rgba(0,0,0,.45);opacity:.35;transform:scale(.94);transition:opacity .4s var(--ease),transform .5s var(--ease)}
+.slide.on{opacity:1;transform:none;cursor:zoom-in}
+.slide img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none}
+.slide:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.shot-nav{position:relative;z-index:2;display:flex;justify-content:center;align-items:center;gap:18px;margin-top:-34px;font-family:var(--f-mono);font-size:12px}
+.shot-nav button{all:unset;cursor:pointer;padding:6px 12px;border:1px solid var(--line);background:var(--card);transition:border-color .15s}
+.shot-nav button:hover,.shot-nav button:focus-visible{border-color:var(--ink)}
+.shot-nav .tiny{min-width:11em;text-align:center}
+.zoom{cursor:zoom-in}
+.lightbox{border:0;padding:0;margin:auto;max-width:none;max-height:none;width:100vw;height:100dvh;background:transparent;color:var(--paper)}
+.lightbox::backdrop{background:rgba(6,7,8,.88);backdrop-filter:blur(6px)}
+.lightbox[open]{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:max(16px,3vh) 16px}
+.lightbox img{max-width:min(100%,1600px);max-height:calc(100dvh - 96px);width:auto;height:auto;object-fit:contain;box-shadow:0 30px 120px rgba(0,0,0,.6);cursor:zoom-out}
+.lb-bar{display:flex;align-items:center;gap:14px;font-family:var(--f-mono)}
+.lb-bar .tiny{color:#b4b7bc;min-width:8em;text-align:center}
+.lb-bar button{all:unset;cursor:pointer;font-size:12px;padding:6px 12px;border:1px solid rgba(255,255,255,.3);color:#eceef0}
+.lb-bar button:hover,.lb-bar button:focus-visible{border-color:#eceef0}
+
+/* chapters */
+.main{display:grid;grid-template-columns:150px minmax(0,1fr);gap:56px;padding-bottom:96px}
+.rail{position:sticky;top:max(28vh,120px);align-self:start;display:flex;flex-direction:column;gap:2px;font-family:var(--f-mono);font-size:11.5px;padding-top:120px}
+.rail a{text-decoration:none;color:var(--faint);padding:5px 0 5px 14px;border-left:1px solid var(--line);transition:color .25s,border-color .25s}
+.rail a [lang="zh"]{font-family:var(--f-sans);font-size:12.5px}
+.rail a.on{color:var(--ink);border-left-color:var(--ink)}
+.rail a:hover{color:var(--ink)}
+.chap{padding-block:120px 0;display:flex;flex-direction:column;gap:32px;scroll-margin-top:40px}
+.fh{display:flex;flex-direction:column;gap:14px}
+.fh h2{font-weight:900;padding-bottom:.08em;font-size:clamp(28px,3.6vw,46px);line-height:1.25;margin:0;letter-spacing:.01em;max-width:20em;text-wrap:balance}
+.fh h2 [lang="en"]{letter-spacing:-.025em}
+.fh h2 .ph{display:inline-block}
+.fh > p,.fh > .cli{transition:opacity .7s var(--ease) .3s,border-color .15s}
+.fh p{font-size:16px;color:var(--mute);margin:0;max-width:36em;text-wrap:pretty}
+.cli{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;align-items:center;gap:0;font-family:var(--f-mono);font-size:13px;border:1px solid var(--line);background:var(--card);padding:7px 0 7px 12px;transition:border-color .15s}
+.cli:hover{border-color:var(--ink)}
+.cli:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.cli .dim{color:var(--faint);white-space:pre}
+.cli code{font-family:inherit;font-weight:600}
+.cli .cp{margin-left:14px;padding:0 12px;border-left:1px solid var(--line);font-size:10.5px;color:var(--mute)}
+/* install */
+.play.setup{min-height:0;align-content:start;gap:20px}
+.setup .seg{justify-self:start}
+.setup-body{display:flex;flex-direction:column;gap:16px;min-width:0}
+.lead{margin:0;font-size:14px;color:var(--mute)}
+.step{display:flex;flex-direction:column;gap:10px;min-width:0}
+.step h4{margin:0;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+.step h4 i{font-style:normal;font-family:var(--f-mono);font-size:11px;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--ink);flex:none}
+.picks{display:flex;flex-direction:column;gap:10px}
+.picks .grp-n{font-family:var(--f-mono);font-size:10.5px;color:var(--mute)}
+.chip .pk{display:block;font-family:var(--f-mono);font-size:10px;opacity:.6}
+.none{font-size:13px;color:var(--mute);margin:0}
+.cmd{display:flex;align-items:stretch;border:1px solid var(--ink);background:var(--card);min-width:0}
+.cmd code{flex:1;min-width:0;font-family:var(--f-mono);font-size:12.5px;padding:14px 16px;overflow-x:auto;white-space:nowrap}
+.cmd .copy{all:unset;cursor:pointer;font-family:var(--f-mono);font-size:11px;padding:0 16px;border-left:1px solid var(--ink);background:var(--ink);color:var(--paper)}
+.cmd .copy:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.alt{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.alt li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--mute)}
+.alt li > span{min-width:13em}
+.alt code{font-family:var(--f-mono);font-size:12px;color:var(--ink)}
+.alt a,.setup .tiny a{font-family:var(--f-mono);font-size:12px;color:var(--ink);text-decoration:none;border-bottom:1px solid var(--faint)}
+.alt a:hover,.setup .tiny a:hover{border-color:var(--ink)}
+.play{border:1px solid var(--line);background-color:var(--card);background-image:radial-gradient(520px circle at var(--mx,-999px) var(--my,-999px),var(--wash),transparent 55%),radial-gradient(var(--dot) 1px,transparent 1px);background-size:auto,16px 16px;padding:28px;min-height:440px;display:grid;gap:22px;min-width:0}
+.play{grid-template-columns:minmax(0,1fr)}
+.play-2{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:stretch}
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.side h4{margin:0;font-family:var(--f-mono);font-size:11px;font-weight:500;color:var(--mute);letter-spacing:.04em}
+.panel{border:1px solid var(--line);background:var(--card);min-width:0}
+
+/* reveal motion: only for elements that start below the fold */
+.js .pre{opacity:0}
+.js .pre.rv-left{transform:translateX(-80px)}
+.js .pre.rv-right{transform:translateX(80px)}
+.rv-left,.rv-right{transition:opacity .9s var(--ease),transform 1s var(--ease);transition-delay:var(--d,0s)}
+.play{position:relative}
+.play::before{content:"";position:absolute;inset:-1px;padding:1px;pointer-events:none;z-index:3;background:radial-gradient(380px circle at var(--mx,-999px) var(--my,-999px),var(--edge),transparent 45%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.gw{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
+#trail{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1}
+.play.vidplay{padding:0;min-height:0;display:block;background:none;border-color:var(--line);overflow:hidden}
+.vidplay video{width:100%;height:auto}
+
+/* lightweight chart */
+.chart{display:flex;flex-direction:column;gap:18px}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:grid;grid-template-columns:110px minmax(0,1fr);align-items:center;gap:14px;padding:4px 0}
+.bar-row .nm{font-family:var(--f-mono);font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-row.me .nm{color:var(--ink);font-weight:600}
+.track{display:flex;align-items:center;gap:10px;min-width:0}
+.bar{height:18px;background:repeating-linear-gradient(90deg,var(--faint) 0 5px,transparent 5px 7px);width:0;transition:width 1.1s var(--ease);transition-delay:var(--d,0s);flex:none}
+.bar-row.me .bar{background:var(--ink);box-shadow:var(--barglow)}
+.val{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--mute)}
+.bar-row.me .val{color:var(--ink);font-weight:700}
+.axis{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px}
+.axis div{border-top:1px solid var(--line);position:relative;height:18px}
+.axis div span{position:absolute;top:4px;transform:translateX(-50%);font-family:var(--f-mono);font-size:10px;color:var(--faint)}
+
+/* extreme load */
+.duel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 44px}
+.mt{display:flex;flex-direction:column;gap:14px;min-width:0}
+.mt h4{margin:0;font-size:14px;font-weight:700}
+.mt h4 small{display:block;font-family:var(--f-mono);font-size:10.5px;font-weight:400;color:var(--mute);margin-top:2px}
+.method{font-size:12.5px;line-height:1.75;color:var(--mute);margin:-18px 0 0;max-width:62em;text-wrap:pretty}
+.lc{display:block;width:100%;height:auto;overflow:visible;font-family:var(--f-mono);touch-action:pan-y}
+.lc .grid line{stroke:var(--line)}
+.lc .tk{font-size:10px;fill:var(--mute)}
+.lc .ser{transition:opacity .2s}
+.lc.hl .ser:not(.on){opacity:.14}
+.lc .ln{fill:none;stroke:var(--mute);stroke-width:1.3;stroke-linejoin:round;stroke-linecap:round}
+.lc .ln.est{stroke-dasharray:4 3}
+.lc .hit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke}
+.lc .pt{fill:var(--mute);stroke:var(--card);stroke-width:1.5}
+.lc .pt.est{fill:var(--card);stroke:var(--mute);stroke-width:1.3}
+.lc .me .ln{stroke:var(--ink);stroke-width:2.4}
+.lc .ref .ln{stroke:var(--faint);stroke-dasharray:1 3}
+.lc .ref .pt{fill:var(--faint)}
+.lc .ref .lab{fill:var(--faint)}
+.lc .me .pt{fill:var(--ink)}
+.lc .x{font-size:11px;fill:var(--mute)}
+.lc .pv{font-size:9.5px;fill:var(--ink);opacity:0;transition:opacity .2s}
+.lc .ser.on .pv{opacity:1}
+.lc .lab{font-size:10.5px;fill:var(--mute);cursor:default}
+.lc .me .lab{fill:var(--ink);font-weight:700}
+.lc .lab .nt{font-size:9.5px;font-weight:400;opacity:.8}
+.lc .lead{stroke:var(--line);stroke-dasharray:1 2;fill:none}
+.lc .plot{clip-path:inset(-24px 100% -24px -24px);transition:clip-path 1.5s var(--ease)}
+.lc .labs{opacity:0;transition:opacity .5s ease 1s}
+.lc.shown .plot{clip-path:inset(-24px -24px -24px -24px)}
+.lc.shown .labs{opacity:1}
+@media (max-width:900px){.duel{grid-template-columns:minmax(0,1fr);gap:0}.mt + .mt{border-top:1px solid var(--line);padding-top:24px;margin-top:24px}}
+
+/* persona */
+.convo{display:flex;flex-direction:column;gap:12px;padding:18px;min-height:300px;justify-content:flex-end}
+.bubble{max-width:85%;padding:9px 13px;font-size:14px;line-height:1.55;animation:pop .35s var(--ease) both}
+.bubble.u{align-self:flex-end;background:var(--panel)}
+.bubble.a{align-self:flex-start;background:var(--ink);color:var(--paper)}
+.mems{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);font-size:13.5px}
+.mems li{padding:9px 0;border-bottom:1px solid var(--line)}
+.mems li.new{animation:pop .4s var(--ease) both}
+.mems li.empty{color:var(--mute);font-size:12.5px}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* preset */
+#presets{justify-self:start}
+.ptree{columns:2;column-gap:10px}
+@media (max-width:900px){.ptree{columns:1}}
+.grp{border:1px solid var(--line);background:var(--card);break-inside:avoid;margin-bottom:10px}
+.grp:last-child{margin-bottom:0}
+.grp-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 12px;background:var(--panel);font-size:12.5px;font-weight:700}
+.tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.tool{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 12px;font-size:13px;background:var(--card)}
+.tool:last-child:nth-child(odd){grid-column:1/-1}
+.tg{all:unset;cursor:pointer;width:30px;height:16px;border:1px solid var(--faint);position:relative;transition:background .15s,border-color .15s;flex:none}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;background:var(--faint);transition:transform .2s var(--ease),background .15s}
+.tg[aria-checked="true"]{background:var(--ink);border-color:var(--ink)}
+.tg[aria-checked="true"]::after{transform:translateX(14px);background:var(--paper)}
+.tg[aria-checked="mixed"]{border-color:var(--ink)}
+.tg[aria-checked="mixed"]::after{transform:translateX(7px);background:var(--ink)}
+.tg:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* streaming render */
+.stream{display:flex;flex-direction:column;gap:14px;max-width:760px;margin:0 auto;width:100%}
+.stream-bar{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.stream-body{min-height:500px;display:flex;flex-direction:column;gap:16px;border:1px solid var(--line);background:var(--card);padding:24px 28px}
+.blk{min-width:0}
+.blk.src{font-family:var(--f-mono);font-size:12.5px;line-height:1.75;white-space:pre-wrap;color:var(--mute)}
+.blk.typing > :last-child::after,.blk.typing.src::after{content:"";display:inline-block;width:.55em;height:1.05em;background:var(--ink);vertical-align:-.18em;margin-left:2px}
+.blk.wipe{animation:wipe .42s var(--ease) both}
+@keyframes wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.blk h5{font-size:22px;font-weight:900;margin:0}
+.blk p{margin:0;font-size:14.5px}
+.blk table{border-collapse:collapse;font-size:13px;width:min(320px,100%)}
+.blk th,.blk td{border:1px solid var(--line);padding:5px 12px;text-align:left}
+.blk th{background:var(--panel);font-weight:700}
+.pbar{display:inline-block;width:64px;height:4px;background:var(--panel);margin-right:10px;vertical-align:middle}
+.pbar i{display:block;height:100%;background:var(--ink)}
+.blk .math{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",Georgia,serif;font-style:italic;font-size:26px}
+.blk .math sup{font-size:.6em}
+.blk svg.flow{width:300px;max-width:100%;height:44px;overflow:visible}
+.blk svg.flow rect{fill:var(--panel);stroke:var(--ink)}
+.blk svg.flow text{fill:var(--ink);font-family:var(--f-sans);font-size:11.5px}
+.blk svg.flow path{stroke:var(--ink);fill:none}
+.blk .code{margin:0;font-family:var(--f-mono);font-size:12.5px;background:var(--panel);border:1px solid var(--line);padding:12px 14px;white-space:pre-wrap}
+.code .k{color:var(--ink);font-weight:700}.code .f{color:var(--ink)}.code .s{color:var(--mute)}
+
+/* colours */
+.bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.csrc{display:flex;flex-direction:column;gap:8px;min-height:84px}
+.cavs{display:flex;gap:10px}
+.cav{all:unset;cursor:pointer;width:52px;height:52px;border-radius:50%;border:1px solid var(--line)}
+.cav[aria-pressed="true"],.wp[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+.cav:focus-visible,.wp:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.wps{display:flex;gap:8px}
+.wp{all:unset;cursor:pointer;flex:1;height:52px;border:1px solid var(--line)}
+.pal{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.pal div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pal i{display:block;height:30px;border:1px solid var(--line);transition:background .5s}
+.pal span{font-family:var(--f-mono);font-size:9px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app[hidden],.tuim[hidden]{display:none}
+.app{display:grid;grid-template-columns:120px minmax(0,1fr);min-height:330px;border:1px solid var(--line);overflow:hidden;font-size:12px;transition:background .5s,color .5s}
+.app *{transition:background .5s,color .5s,border-color .5s}
+.app-side{padding:12px;display:flex;flex-direction:column;gap:6px}
+.app-side b{font-size:13px;margin-bottom:6px}
+.app-side span{padding:4px 8px;white-space:nowrap}
+.app-main{display:flex;flex-direction:column;justify-content:flex-end;gap:8px;padding:16px}
+.app-main .m{max-width:80%;padding:7px 11px}
+.app-main .m.u{align-self:flex-end}
+.app-in{margin-top:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center}
+.app-in i{width:18px;height:18px;border-radius:50%}
+
+.tuim{display:grid;grid-template-columns:minmax(0,1fr) 160px;min-height:330px;font-family:var(--f-mono);font-size:11px;line-height:1.7;border:1px solid var(--line);transition:background .5s,color .5s}
+.tuim *{transition:color .5s,background .5s,border-color .5s}
+.tm-main{padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.tm-side{padding:12px;border-left:1px solid;display:flex;flex-direction:column;gap:1px;min-width:0;overflow:hidden;white-space:nowrap}
+.tm-side .tm-acc{margin-top:8px}
+.tm-side .tm-acc:first-child{margin-top:0}
+.tm-user{border-left:2px solid;padding:2px 8px}
+.tm-in{margin-top:auto;border:1px solid;border-radius:4px;padding:4px 8px}
+.tm-status{font-size:10px}
+.tm-bar{height:5px;border:1px solid;margin:3px 0}
+.tm-bar i{display:block;height:100%;width:22%}
+@media (max-width:560px){.tuim{grid-template-columns:minmax(0,1fr)}.tm-side{display:none}}
+
+/* chat */
+.phone{display:flex;flex-direction:column;min-width:0}
+.phone-h{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.phone-h b{font-size:14px}
+.feed{height:360px;overflow:hidden;padding:14px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;font-size:13.5px}
+.row{display:flex;gap:8px;align-items:flex-end;max-width:92%;animation:pop .32s var(--ease) both}
+.row.me{align-self:flex-end;flex-direction:row-reverse}
+.row .face{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--paper)}
+.row .face img{width:26px;height:26px;border-radius:50%}
+.rimg{display:flex;flex-direction:column;gap:3px;padding:12px 14px;background:var(--card);border:1px solid var(--line);font-size:12px;box-shadow:0 6px 18px -10px rgba(0,0,0,.35);max-width:260px}
+.rimg b{font-size:14px;margin-bottom:4px}
+.row .bub{display:flex;flex-direction:column;gap:2px;min-width:0}
+.row.me .bub{align-items:flex-end}
+.row small{font-family:var(--f-mono);font-size:10px;color:var(--mute)}
+.row p{margin:0;padding:7px 11px;background:var(--panel);line-height:1.55}
+.row.bot p{background:var(--ink);color:var(--paper)}
+.sys{align-self:center;font-size:11.5px;color:var(--mute);animation:pop .32s var(--ease) both;text-align:center}
+.dots{display:inline-flex;gap:4px;padding:10px 12px;background:var(--ink)}
+.dots i{width:5px;height:5px;border-radius:50%;background:var(--paper);animation:dot 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+/* market */
+.pkgs{display:flex;flex-direction:column;gap:12px}
+.pkg{border:1px solid var(--line);background:var(--card)}
+.pkg-h{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px}
+.pkg .ic{width:40px;height:40px;border:1px solid var(--ink);display:grid;place-items:center;font-family:var(--f-mono);font-size:14px;font-weight:700}
+.pkg b{font-size:14.5px;display:block}
+.pkg .desc{font-size:12px;color:var(--mute);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inst{all:unset;cursor:pointer;font-family:var(--f-mono);font-size:11px;padding:6px 12px;border:1px solid var(--ink);min-width:4.8em;text-align:center;position:relative;overflow:hidden;background:var(--ink);color:var(--paper)}
+.inst [lang="zh"]{font-family:var(--f-sans)}
+.inst[data-s="busy"]{cursor:progress;background:none;color:var(--ink)}
+.inst[data-s="busy"]::before{content:"";position:absolute;inset:0;background:var(--ink);opacity:.15;transform-origin:left;animation:fill .9s linear forwards}
+.inst[data-s="done"]{background:none;color:var(--ink)}
+@keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.inst:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.effect{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
+.effect > div{overflow:hidden}
+.pkg.installed .effect{grid-template-rows:1fr}
+.effect .in{border-top:1px dashed var(--line);padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:8px}
+.sticker{all:unset;cursor:pointer;align-self:flex-start;font-size:22px;padding:10px 16px;border:1px solid var(--line);background:var(--paper)}
+.sticker:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.newtool{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.newtool code{font-family:var(--f-mono);font-size:11.5px;padding:3px 8px;border:1px solid var(--line)}
+.newtool code.hl{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.skins{display:flex;gap:8px;flex-wrap:wrap}
+.skin{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:11.5px;padding:5px 10px 5px 6px;border:1px solid var(--line)}
+.skin i{width:28px;height:16px;display:block}
+.skin[aria-pressed="true"]{border-color:var(--ink)}
+.skin:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.pkg.own{border-style:dashed}
+a.inst{text-decoration:none}
+.snip{margin:0;border-top:1px dashed var(--line);padding:12px 14px;font-family:var(--f-mono);font-size:12px;line-height:1.7;overflow-x:auto;color:var(--mute)}
+.snip .k,.snip .s{color:var(--ink);font-weight:600}
+.pkg-hint{font-size:12px;color:var(--mute);margin:0}
+
+/* footer */
+.foot-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:36px 20px;flex-wrap:wrap}
+footer{background:var(--ink);color:var(--paper);position:relative;z-index:1}
+.foot{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:36px;align-items:center;padding-block:72px 48px}
+.foot .mark{width:84px;height:84px;color:var(--paper)}
+.foot-cmd{font-family:var(--f-mono);font-weight:700;font-size:clamp(20px,2.4vw,28px);letter-spacing:-.04em}
+.foot-cmd .dim{opacity:.4;font-weight:400}
+.foot-links{display:flex;flex-direction:column;gap:6px;font-family:var(--f-mono);font-size:12px;text-align:right}
+.foot-links a{text-decoration:none;opacity:.6}
+.foot-links a:hover{opacity:1}
+.fine{font-family:var(--f-mono);font-size:10.5px;opacity:.4;padding-bottom:28px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;letter-spacing:.04em}
+
+@media (max-width:1100px){
+  .main{grid-template-columns:minmax(0,1fr)}
+  .rail{display:none}
+}
+@media (max-width:900px){
+  .hero{gap:48px;padding-block:32px 72px}
+  .play-2{grid-template-columns:minmax(0,1fr)}
+  .chap{padding-top:88px}
+  .foot{grid-template-columns:minmax(0,1fr);gap:24px}
+  .foot-links{text-align:left;flex-direction:row;gap:18px;flex-wrap:wrap}
+}
+@media (max-width:560px){
+  .reel{--sw:80vw;gap:10px}
+  .links{display:none}
+  .play{padding:16px}
+  .bar-row,.axis,.mt .bar-row{grid-template-columns:86px minmax(0,1fr);gap:10px}
+  .bar-row .nm,.val{font-size:11px}
+  .pal span{font-size:8px;letter-spacing:-.02em}
+  .app{grid-template-columns:minmax(0,1fr)}
+  .app-side{display:none}
+  .pkg .desc{white-space:normal}
+  .cmd code{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+  #presets{display:flex;flex-wrap:nowrap;justify-self:stretch}
+  :root[data-lang="en"] #presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  :root[data-lang="en"] .tools{grid-template-columns:minmax(0,1fr)}
+  #presets button{flex:1 1 auto;padding:6px 4px;text-align:center;white-space:nowrap}
+  .snip{white-space:pre-wrap;overflow-wrap:anywhere}
+}
+@media (prefers-reduced-motion:reduce){
+  .cur,.dots i{animation:none}
+  .row,.sys,.bubble{animation:none}
+  .bar{transition:none}
+}
+</style>
+
+</head>
+<body>
+<canvas id="trail" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="#top" id="top"><img class="mark" src="assets/logo/logo-64.png" width="64" height="64" alt="">miyu</a>
+    <div class="nav-r">
+      <div class="links">
+        <a href="https://github.com/miyu-agent/miyu/tree/main/docs" target="_blank" rel="noopener"><span lang="zh">文档</span><span lang="en">Docs</span></a>
+        <a href="https://github.com/miyu-agent" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <div class="seg" role="group" aria-label="语言 / Language">
+        <button data-lang="zh" aria-pressed="true">中</button>
+        <button data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="stage">
+      <canvas id="glyphs" role="img" aria-label="用 miyu 四个字母拼成的 logo，鼠标划过会搅动字符，点击会扩散波纹"></canvas>
+    </div>
+    <div class="hero-t">
+      <h1>Miyu Agent Harness</h1>
+      <p class="traits">
+        <span lang="zh"><span class="ph">用户友好</span><i>/</i><span class="ph">极致轻量</span><i>/</i><span class="ph">功能完备</span></span>
+        <span lang="en"><span class="ph">User-friendly</span><i>/</i><span class="ph">Ultra-light</span><i>/</i><span class="ph">Full-featured</span></span>
+      </p>
+      <div class="cta" id="dl">
+        <a class="btn" href="#install" data-os="linux">Linux</a>
+        <a class="btn" href="#install" data-os="macos">macOS</a>
+        <a class="btn" href="#install" data-os="windows">Windows</a>
+      </div>
+      <div class="plat"><span lang="zh">首个正式版即将发布</span><span lang="en">First release coming soon</span></div>
+    </div>
+  </section>
+
+  <section class="screens" id="screens" aria-label="界面截图">
+    <div class="tilt" id="tilt">
+      <div class="reel" id="reel"></div>
+    </div>
+    <div class="shot-nav">
+      <button id="shot-prev" aria-label="上一张 / Previous">←</button>
+      <span class="tiny" id="shot-cap" aria-live="polite"></span>
+      <button id="shot-next" aria-label="下一张 / Next">→</button>
+    </div>
+  </section>
+  <dialog class="lightbox" id="lightbox" aria-label="大图 / Full size">
+    <img id="lb-img" alt="">
+    <div class="lb-bar">
+      <button id="lb-prev" aria-label="上一张 / Previous">←</button>
+      <span class="tiny" id="lb-cap"></span>
+      <button id="lb-next" aria-label="下一张 / Next">→</button>
+      <button id="lb-close" aria-label="关闭 / Close">esc ✕</button>
+    </div>
+  </dialog>
+
+  <div class="main">
+    <aside class="rail" aria-label="章节" id="rail"></aside>
+    <div>
+
+      <!-- lightweight -->
+      <section class="chap" id="c-light" data-zh="轻量" data-en="Lightweight">
+        <header class="fh">
+          <h2><span lang="zh">占用极低，极速运行。</span><span lang="en">Tiny footprint. Fast all the way.</span></h2>
+        </header>
+        <div class="play rv-glyph" style="min-height:0">
+          <div class="chart">
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+              <div class="seg" role="group" aria-label="指标" id="metric">
+                <button data-m="mem" aria-pressed="true"><span lang="zh">内存</span><span lang="en">Memory</span></button>
+                <button data-m="cpu" aria-pressed="false">CPU</button>
+              </div>
+              <span class="tiny" id="unit"></span>
+            </div>
+            <div class="bars" id="bars"></div>
+            <div class="axis" id="axis"><span></span><div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- extreme load: stress test 2026-11-10, five harnesses on the same machine and fake model -->
+      <section class="chap" id="c-stress" data-zh="极端负载" data-en="Under load">
+        <header class="fh">
+          <h2><span lang="zh">极端负载下也能快速运行。</span><span lang="en">Still fast under extreme load.</span></h2>
+        </header>
+        <div class="play rv-glyph" style="min-height:0">
+          <div class="duel" id="duel"></div>
+        </div>
+        <p class="method"><span lang="zh">测试机是 8 核 16 线程、22G 内存的 Ryzen 7 8745HS。交互速度量了空载和三种压力：CPU 超订是 256 个线程烧 CPU，2000 线程是 2000 个线程每 1 毫秒醒一次，全叠加是整机压满：128 个线程烧 CPU，1000 个线程抢调度，32 个进程不停 fork，32 对线程来回切换，同时还有占内存和写盘的程序，平均负载约 830；cat 是同时开着的最简单的终端程序，当参照，空载为终端去掉按键等待后的复测值。吞吐是 50、200 个会话同时不停地跑；内存是 50、200 个会话各跑 5 轮、歇 10 秒后量的。pi 一个会话一个进程，200 个会话内存不够、开不起来，这两项是推算的：50 个会话时它已用满约 13 个 CPU 线程，10→50 个会话吞吐只从 81 涨到 117 轮/秒，200 个会话也就约 120 轮/秒；内存按 50 个会话的 3.6 GB 乘 4。万轮是一个会话连着跑 1 万轮，按当时上下文的大小分档，量每一步扣掉模型以后各家自己花的时间：跑工具、整理历史、拼请求；dsh 到不了 17 万 token 就压缩了。五家接同一个本地假模型、跑同一套工具调用，比的只是 harness 本身。</span><span lang="en">Test machine: Ryzen 7 8745HS, 8 cores / 16 threads, 22 GB RAM. Interaction speed is measured idle and under three loads: CPU ×16 is 256 threads burning CPU, 2k threads is 2,000 threads waking every millisecond, and all at once saturates the whole machine with 128 threads burning CPU, 1,000 threads fighting over the scheduler, 32 processes forking nonstop and 32 thread pairs ping-ponging, plus programs hogging memory and writing to disk, for a load average around 830; cat is the simplest terminal program, run alongside as a reference, and the idle figure is a retest after the TUI dropped its keypress wait. Throughput runs 50 and 200 sessions at once; memory is measured after 50 and 200 sessions each run 5 turns and sit idle for 10 seconds. pi runs one process per session and runs out of memory before 200, so both of its figures are estimates: at 50 sessions it already saturates about 13 CPU threads, and going from 10 to 50 sessions only lifted it from 81 to 117 turns/s, so 200 sessions lands around 120 turns/s; memory is 4× the 3.6 GB measured at 50. The 10,000-turn test runs one session nonstop and times each step by context size, minus the model: running tools, tidying history, building the request; dsh compacts before reaching 170k tokens. All five use the same local fake model and the same tool calls, so only the harness itself is measured.</span></p>
+      </section>
+
+      <!-- persona -->
+      <section class="chap" id="c-persona" data-zh="人格" data-en="Personas">
+        <header class="fh">
+          <h2><span lang="zh">创建独属于你的人格。</span><span lang="en">Create a persona that's yours alone.</span></h2>
+          <p><span lang="zh">开箱即用的记忆功能让 Agent 随你一起成长，真正认识你。</span><span lang="en">Memory works out of the box, so the agent grows with you and really gets to know you.</span></p>
+          <button class="cli"><span class="dim">$ </span><code>miyu persona</code><span class="cp">copy</span></button>
+        </header>
+        <div class="play play-2 rv-glyph">
+          <div class="panel phone">
+            <div class="phone-h"><b id="p-name"></b></div>
+            <div class="convo" id="pconvo" aria-live="polite"></div>
+          </div>
+          <div class="side">
+            <h4><span lang="zh">选个人格</span><span lang="en">Pick a persona</span></h4>
+            <div class="chips" id="ptone"></div>
+            <h4><span lang="zh">对它说</span><span lang="en">Say</span></h4>
+            <div class="chips" id="pchips"></div>
+            <h4><span lang="zh">它记住了</span><span lang="en">It remembers</span></h4>
+            <ul class="mems" id="mems" aria-live="polite"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- preset -->
+      <section class="chap" id="c-preset" data-zh="预设" data-en="Presets">
+        <header class="fh">
+          <h2><span lang="zh">自定义预设，选择你想要的功能，关闭你不需要的一切。</span><span lang="en">Pick the features you want with presets. Switch off everything you don't.</span></h2>
+          <button class="cli"><span class="dim">$ </span><code>miyu preset</code><span class="cp">copy</span></button>
+        </header>
+        <div class="play rv-glyph" style="min-height:0">
+          <div class="seg" role="group" aria-label="预设 / Preset" id="presets"></div>
+          <div class="ptree" id="tools"></div>
+          <span class="tiny" id="loadtxt"></span>
+        </div>
+      </section>
+
+      <!-- rendering -->
+      <section class="chap" id="c-render" data-zh="渲染" data-en="Rendering">
+        <header class="fh">
+          <h2><span lang="zh">丰富的渲染效果。</span><span lang="en">Rich rendering.</span></h2>
+          <p><span lang="zh">公式、Markdown、Mermaid、图片等丰富渲染。</span><span lang="en">Math, Markdown, Mermaid, images, and more.</span></p>
+        </header>
+        <div class="play rv-glyph" style="min-height:0">
+          <div class="stream">
+            <div class="stream-bar">
+              <div style="display:flex;gap:8px;align-items:center">
+                <div class="seg" role="group" aria-label="显示" id="rmode"><button data-v="ren" aria-pressed="true"><span lang="zh">渲染</span><span lang="en">Rendered</span></button><button data-v="src" aria-pressed="false"><span lang="zh">源码</span><span lang="en">Source</span></button></div>
+                <button class="chip mono" id="replay">↻ <span lang="zh">重播</span><span lang="en">replay</span></button>
+              </div>
+            </div>
+            <div class="stream-body" id="sbody" aria-live="off"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- shell -->
+      <section class="chap" id="c-shell" data-zh="终端集成" data-en="Shell">
+        <header class="fh">
+          <h2><span lang="zh">终端无缝集成，彻底改变终端工作流。</span><span lang="en">Lives in your shell. A new way to work in the terminal.</span></h2>
+          <button class="cli"><span class="dim">$ </span><code>miyu shellhook</code><span class="cp">copy</span></button>
+        </header>
+        <div class="play vidplay rv-glyph">
+          <video id="shellvid" src="assets/shell.mp4" poster="assets/shell-poster.jpg" width="1086" height="718" muted loop playsinline preload="metadata" aria-label="在 fish 里直接问电脑状况，AI 在 shell 里跑命令、回答，答完把提示符还回来"></video>
+        </div>
+      </section>
+
+      <!-- colours -->
+      <section class="chap" id="c-color" data-zh="配色" data-en="Colors">
+        <header class="fh">
+          <h2><span lang="zh">配色自动切换，无缝融入桌面主题。</span><span lang="en">Colors switch on their own to match your desktop theme.</span></h2>
+          <p><span lang="zh">跟随头像或壁纸取色，深浅色跟着系统走。</span><span lang="en">Colors follow your avatar or wallpaper. Light and dark follow the system.</span></p>
+          <button class="cli" id="ui-cli"><span class="dim">$ </span><code>miyu web</code><span class="cp">copy</span></button>
+        </header>
+        <div class="play play-2 rv-glyph">
+          <div class="side" style="gap:12px">
+          <div class="bar2">
+            <div class="seg" role="group" aria-label="界面 / UI" id="uiview">
+              <button data-v="gui" aria-pressed="true">GUI</button><button data-v="tui" aria-pressed="false">TUI</button>
+            </div>
+            <div class="seg" role="group" aria-label="明暗 / Shade" id="shade">
+              <button data-v="light" aria-pressed="true"><span lang="zh">浅色</span><span lang="en">Light</span></button><button data-v="dark" aria-pressed="false"><span lang="zh">深色</span><span lang="en">Dark</span></button>
+            </div>
+          </div>
+          <div class="app" id="app">
+            <div class="app-side" data-c="side"><b>Miyu</b><span data-c="sel"><span lang="zh">新建会话</span><span lang="en">New session</span></span><span><span lang="zh">全部会话</span><span lang="en">All sessions</span></span><span><span lang="zh">设置</span><span lang="en">Settings</span></span></div>
+            <div class="app-main">
+              <div class="m u" data-c="u"><span lang="zh">换个配色试试</span><span lang="en">Try another color scheme</span></div>
+              <div class="m" data-c="a"><span lang="zh">换好了，界面跟着一起变。</span><span lang="en">Done. The whole UI changed with it.</span></div>
+              <div class="app-in" data-c="in"><span class="tiny" style="color:inherit;opacity:.6">›</span><i data-c="send"></i></div>
+            </div>
+          </div>
+          <div class="tuim" id="tuim" hidden>
+            <div class="tm-main">
+              <div class="tm-dim"><span class="tm-dot">●</span> Context cleared</div>
+              <div class="tm-user"><span lang="zh">换个配色试试</span><span lang="en">try another color scheme</span></div>
+              <div class="tm-dim">Thought for 1s</div>
+              <div><span lang="zh">换好了，界面跟着一起变。</span><span lang="en">Done. The whole UI changed with it.</span></div>
+              <div class="tm-dim">⊡ 16:25 · deepseek-flash · 2.4s</div>
+              <div class="tm-in"><span class="tm-acc">❱</span> <span class="tm-dim">PgUp and PgDn scroll</span></div>
+              <div class="tm-status"><span class="tm-acc">⊡ Workspace</span> · <b>deepseek-flash</b> <span class="tm-dim">· max</span></div>
+            </div>
+            <div class="tm-side">
+              <div class="tm-acc">Session</div><div class="tm-dim">Preset Everything</div>
+              <div class="tm-acc">Context</div><div class="tm-dim">12.6k / 1M</div><div class="tm-bar"><i></i></div>
+              <div class="tm-acc">Usage</div><div class="tm-dim">Cache hits 98%</div>
+            </div>
+          </div>
+          </div>
+          <div class="side">
+            <h4><span lang="zh">配色</span><span lang="en">Color scheme</span></h4>
+            <div class="seg" role="group" aria-label="配色 / Scheme" id="cmode" style="align-self:flex-start"></div>
+            <div class="csrc" id="csrc"></div>
+            <div class="pal" id="pal"></div>
+            <span class="tiny" id="seed"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- messaging -->
+      <section class="chap" id="c-im" data-zh="通讯平台" data-en="Messaging">
+        <header class="fh">
+          <h2><span lang="zh">接入通讯平台，用手机也能远程对话 Agent 执行任务。</span><span lang="en">Connect your chat apps and hand the agent tasks from your phone.</span></h2>
+          <button class="cli"><span class="dim">$ </span><code>miyu im</code><span class="cp">copy</span></button>
+        </header>
+        <div class="play play-2 rv-glyph">
+          <div class="panel phone">
+            <div class="phone-h"><div><b id="chat-title"></b> <span class="tiny" id="chat-sub"></span></div><span class="tiny" id="chat-plat"></span></div>
+            <div class="feed" id="feed" aria-live="polite"></div>
+          </div>
+          <div class="side">
+            <div class="bar2">
+              <div class="seg" role="group" aria-label="平台 / Platform" id="plat">
+                <button data-p="qq" aria-pressed="true">QQ</button><button data-p="tg" aria-pressed="false">Telegram</button>
+              </div>
+              <div class="seg" role="group" aria-label="聊天 / Chat" id="chat-tabs">
+                <button data-c="0" aria-pressed="true"><span lang="zh">私聊</span><span lang="en">Direct</span></button><button data-c="1" aria-pressed="false"><span lang="zh">群聊</span><span lang="en">Group</span></button>
+              </div>
+            </div>
+            <h4 id="chat-hint"></h4>
+            <div class="chips" id="chat-chips"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- market -->
+      <section class="chap" id="c-market" data-zh="软件市场" data-en="Market">
+        <header class="fh">
+          <h2><span lang="zh">高度可自定义，从软件市场发现更多扩展软件，或者开发你自己的。</span><span lang="en">Make it yours. Find more extensions in the market, or build your own.</span></h2>
+          <button class="cli"><span class="dim">$ </span><code>miyu pkg</code><span class="cp">copy</span></button>
+        </header>
+        <div class="play rv-glyph" style="min-height:0">
+          <p class="pkg-hint"><span lang="zh">装上看看会多出什么，再卸掉也行。</span><span lang="en">Install one to see what it adds. Remove it just as easily.</span></p>
+          <div class="pkgs">
+            <div class="pkg" data-k="ext">
+              <div class="pkg-h"><div class="ic">+</div><div><b><span lang="zh">更多扩展</span><span lang="en">More extensions</span></b><span class="desc"><span lang="zh">给 Agent 加新工具、新本事</span><span lang="en">New tools and skills for the agent</span></span></div><button class="inst"></button></div>
+              <div class="effect"><div><div class="in">
+                <div class="newtool"><span class="tiny">tools</span><code>read</code><code>write</code><code>shell</code><code class="hl">your_tool</code></div>
+              </div></div></div>
+            </div>
+            <div class="pkg" data-k="theme">
+              <div class="pkg-h"><div class="ic">Aa</div><div><b><span lang="zh">更多主题</span><span lang="en">More themes</span></b><span class="desc"><span lang="zh">换一身皮肤，终端和网页都能换</span><span lang="en">New skins for the terminal and the web</span></span></div><button class="inst"></button></div>
+              <div class="effect"><div><div class="in">
+                <div class="skins" id="skins"></div>
+              </div></div></div>
+            </div>
+            <div class="pkg" data-k="fun">
+              <div class="pkg-h"><div class="ic">:)</div><div><b><span lang="zh">更多玩法</span><span lang="en">More ways to play</span></b><span class="desc"><span lang="zh">表情包、语音、小游戏……</span><span lang="en">Stickers, voice, mini games…</span></span></div><button class="inst"></button></div>
+              <div class="effect"><div><div class="in">
+                <button class="sticker" id="sticker" aria-label="换一个 / another">(๑•̀ㅂ•́)و✧</button>
+              </div></div></div>
+            </div>
+            <div class="pkg own">
+              <div class="pkg-h"><div class="ic">{ }</div><div><b><span lang="zh">或者，开发你自己的</span><span lang="en">Or build your own</span></b><span class="desc"><span lang="zh">Python、Rust 开发包，几行就是一件工具</span><span lang="en">Python and Rust SDKs: a tool in a few lines</span></span></div><a class="inst" href="https://github.com/miyu-agent/miyu-sdk" target="_blank" rel="noopener">SDK ↗</a></div>
+              <pre class="snip"><span class="s">@ext.tool</span>("hello_greet", "Greet someone by name.", schema)
+<span class="k">def</span> greet(args, call):
+    <span class="k">return</span> f"Hello, {args['name']}!"</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- install -->
+      <section class="chap" id="install" data-zh="安装" data-en="Install">
+        <header class="fh">
+          <h2><span lang="zh">一行命令，装好就能用。</span><span lang="en">One line, and you're set.</span></h2>
+          <p><span lang="zh">首个正式版发布后，下面的命令就能用了。</span><span lang="en">These commands work once the first release is out.</span></p>
+        </header>
+        <div class="play setup rv-glyph">
+          <div class="bar2">
+            <div class="seg" role="group" aria-label="平台 / Platform" id="os">
+              <button data-os="linux" aria-pressed="true">Linux</button><button data-os="macos" aria-pressed="false">macOS</button><button data-os="windows" aria-pressed="false">Windows</button>
+            </div>
+            <div class="seg" role="group" aria-label="装法 / How" id="way">
+              <button data-w="bundle" aria-pressed="true"><span lang="zh">整合包</span><span lang="en">Bundle</span></button><button data-w="pick" aria-pressed="false"><span lang="zh">核心 + 自选</span><span lang="en">Core + pick</span></button>
+            </div>
+          </div>
+          <div class="setup-body" id="setup"></div>
+          <p class="tiny"><a href="https://github.com/miyu-agent/miyu/releases/latest" target="_blank" rel="noopener"><span lang="zh">所有版本和压缩包 ↗</span><span lang="en">All releases and archives ↗</span></a></p>
+        </div>
+      </section>
+
+
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <div class="foot-cmd"><span class="dim">$ </span>miyu<span class="cur"></span></div>
+      <div class="foot-links"><a href="https://github.com/miyu-agent" target="_blank" rel="noopener">github ↗</a></div>
+    </div>
+  </div>
+  <div class="wrap fine"><span>AGPL-3.0-or-later</span><span>© 2026 miyu-agent</span></div>
+</footer>
+
+<script>
+(() => {
+const root = document.documentElement;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SYMS = '{}[]<>/\\=+*#$%&;:?!~^|01';
+const rnd = s => s[(Math.random() * s.length) | 0];
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const press = (group, el) => group.forEach(b => b.setAttribute('aria-pressed', String(b === el)));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const L = o => o[lang];
+let lang = 'zh';
+const onLang = [];
+
+/* ================= reveal on scroll: headings decode, panels shed a layer of glyphs ================= */
+const GL = '{}[]<>/\\=+*#$%&;:?!~^|01';
+const revealers = [], initiallyShown = [];
+/* a heading's text lives in one span per clause, so a narrow column breaks it at the comma, not mid-word */
+function clauses(s){
+  if (s._ph) return s._ph;
+  const final = s.dataset.final = s.textContent;
+  s.textContent = '';
+  return s._ph = final.split(/(?<=，)/).map(t => { const e = document.createElement('span'); e.className = 'ph'; e.textContent = t; s.appendChild(e); return { e, t: [...t] }; });
+}
+function scramble(el){
+  el.querySelectorAll('[lang]').forEach(s => {
+    const ph = clauses(s), n = ph.reduce((a, p) => a + p.t.length, 0), t0 = performance.now(), dur = 700;
+    let k = 0;
+    ph.forEach(p => p.at = p.t.map(() => 80 + (k++ / n) * dur * .7 + Math.random() * dur * .3));
+    (function tick(now){
+      const t = now - t0; let done = true;
+      ph.forEach(p => { p.e.textContent = p.t.map((c, i) => { if (t >= p.at[i] || c === ' ') return c; done = false; return rnd(GL); }).join(''); });
+      if (!done) requestAnimationFrame(tick);
+    })(t0);
+  });
+}
+$$('.chap h2 [lang]').forEach(clauses);
+function glyphWipe(el){
+  const r = el.getBoundingClientRect(), W = r.width, H = r.height; if (!W || !H) return;
+  const c = document.createElement('canvas'), dpr = Math.min(2, devicePixelRatio || 1);
+  c.className = 'gw'; c.width = W * dpr; c.height = H * dpr; el.appendChild(c);
+  const x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cs = getComputedStyle(root), bg = cs.getPropertyValue('--card').trim(), dim = cs.getPropertyValue('--faint').trim(), hi = cs.getPropertyValue('--ink').trim();
+  const cw = 11, ch = 18, cols = Math.ceil(W / cw), rows = Math.ceil(H / ch), cells = [];
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) cells.push({ i, j, t: (j / rows) * 700 + Math.random() * 500, g: rnd(GL) });
+  x.font = '500 12px "Martian Mono", monospace'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const t0 = performance.now();
+  (function tick(now){
+    const t = now - t0; x.clearRect(0, 0, W, H); let live = 0;
+    for (const k of cells){
+      if (t > k.t + 140) continue; live++;
+      if (t < k.t){ x.fillStyle = bg; x.fillRect(k.i * cw, k.j * ch, cw, ch); }
+      if (t > k.t - 260){ if (Math.random() < .35) k.g = rnd(GL); x.fillStyle = t > k.t ? hi : dim; x.fillText(k.g, k.i * cw + cw / 2, k.j * ch + ch / 2); }
+    }
+    if (live) requestAnimationFrame(tick); else c.remove();
+  })(t0);
+}
+if (!reduce){
+  root.classList.add('js');
+  const targets = $$('.rv-left,.rv-right,.rv-glyph,.chap h2');
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    io.unobserve(e.target); show(e.target);
+  }), { rootMargin: '0px 0px -38% 0px' });
+  function show(el){
+    if (el.classList.contains('rv-glyph')) glyphWipe(el);
+    if (el.tagName === 'H2'){ scramble(el); el.parentElement.querySelectorAll(':scope > p, :scope > .cli').forEach(x => x.classList.remove('pre')); }
+    el.classList.remove('pre');
+    revealers.forEach(f => f(el));
+  }
+  targets.forEach(el => {
+    if (el.getBoundingClientRect().top < innerHeight * .62){ initiallyShown.push(el); return; }
+    el.classList.add('pre'); io.observe(el);
+    if (el.tagName === 'H2') el.parentElement.querySelectorAll(':scope > p, :scope > .cli').forEach(x => x.classList.add('pre'));
+  });
+}
+
+/* screens: rise into place once */
+const screens = $('#screens');
+if (reduce) screens.classList.add('in');
+else new IntersectionObserver((es, o) => es.forEach(e => { if (e.isIntersecting){ screens.classList.add('in'); o.disconnect(); } }), { rootMargin: '0px 0px -12% 0px' }).observe(screens);
+
+/* screenshots: swipe / arrows through a carousel, neighbours peek in; the centred one opens full size */
+const SHOTS = [
+  { k: 'web-use', cap: { zh: '网页 · 对话中', en: 'Web · in a session' } },
+  { k: 'tui-use', cap: { zh: '终端 · 对话中', en: 'TUI · in a session' } },
+  { k: 'web-new', cap: { zh: '网页 · 新会话', en: 'Web · new session' } },
+  { k: 'tui-new', cap: { zh: '终端 · 新会话', en: 'TUI · new session' } },
+  { k: 'web-settings', cap: { zh: '网页 · 设置', en: 'Web · settings' } },
+];
+const reel = $('#reel');
+reel.innerHTML = SHOTS.map((s, i) => `<button class="slide" data-i="${i}"><img src="assets/${s.k}.webp" alt="" draggable="false" decoding="async"${i > 1 ? ' loading="lazy"' : ''}></button>`).join('');
+const slides = $$('#reel .slide');
+let shot = 0;
+function markShot(i){
+  shot = i;
+  slides.forEach((s, j) => { s.classList.toggle('on', j === i); s.setAttribute('aria-label', L(SHOTS[j].cap)); });
+  $('#shot-cap').textContent = `${L(SHOTS[i].cap)} · ${i + 1}/${SHOTS.length}`;
+}
+function goShot(i, smooth = true){
+  i = Math.max(0, Math.min(SHOTS.length - 1, i));
+  const s = slides[i];
+  reel.scrollTo({ left: s.offsetLeft - (reel.clientWidth - s.offsetWidth) / 2, behavior: smooth && !reduce ? 'smooth' : 'auto' });
+  markShot(i);
+}
+let scrollT = 0;
+reel.addEventListener('scroll', () => {
+  cancelAnimationFrame(scrollT);
+  scrollT = requestAnimationFrame(() => {
+    const mid = reel.scrollLeft + reel.clientWidth / 2;
+    let best = 0, d = Infinity;
+    slides.forEach((s, j) => { const dj = Math.abs(s.offsetLeft + s.offsetWidth / 2 - mid); if (dj < d){ d = dj; best = j; } });
+    if (best !== shot) markShot(best);
+  });
+}, { passive: true });
+// mouse drag (touch and trackpads scroll natively)
+let drag = null;
+reel.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button) return; drag = { x: e.clientX, l: reel.scrollLeft, from: shot, moved: false }; });
+addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  if (!drag.moved && Math.abs(dx) > 5){ drag.moved = true; reel.classList.add('drag'); }
+  if (drag.moved) reel.scrollLeft = drag.l - dx;
+});
+addEventListener('pointerup', e => {
+  if (!drag) return;
+  const { moved, from } = drag, dx = e.clientX - drag.x; drag = null;
+  if (!moved) return;
+  reel.classList.remove('drag');
+  // the nearest slide wins; a short flick still moves one over
+  goShot(shot === from && Math.abs(dx) > 60 ? shot + (dx < 0 ? 1 : -1) : shot);
+  reel.dataset.justDragged = '1'; setTimeout(() => delete reel.dataset.justDragged, 0);
+});
+reel.addEventListener('click', e => {
+  if (reel.dataset.justDragged) return;
+  const b = e.target.closest('.slide'); if (!b) return;
+  const i = +b.dataset.i;
+  if (i === shot){ lbShow(i); lb.showModal(); } else goShot(i);
+});
+reel.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft'){ e.preventDefault(); goShot(shot - 1); slides[shot].focus({ preventScroll: true }); }
+  if (e.key === 'ArrowRight'){ e.preventDefault(); goShot(shot + 1); slides[shot].focus({ preventScroll: true }); }
+});
+$('#shot-prev').addEventListener('click', () => goShot(shot - 1));
+$('#shot-next').addEventListener('click', () => goShot(shot + 1));
+markShot(0); onLang.push(() => markShot(shot));
+new ResizeObserver(() => goShot(shot, false)).observe(reel);
+const lb = $('#lightbox'), lbImg = $('#lb-img');
+let lbI = 0;
+function lbShow(i){ lbI = (i + SHOTS.length) % SHOTS.length; const s = SHOTS[lbI]; lbImg.src = `assets/${s.k}.webp`; lbImg.alt = L(s.cap); $('#lb-cap').textContent = `${L(s.cap)} · ${lbI + 1}/${SHOTS.length}`; }
+lb.addEventListener('close', () => goShot(lbI, false));
+$('#lb-prev').addEventListener('click', () => lbShow(lbI - 1));
+$('#lb-next').addEventListener('click', () => lbShow(lbI + 1));
+$('#lb-close').addEventListener('click', () => lb.close());
+lbImg.addEventListener('click', () => lb.close());
+lb.addEventListener('click', e => { if (e.target === lb) lb.close(); });
+lb.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') lbShow(lbI - 1); if (e.key === 'ArrowRight') lbShow(lbI + 1); });
+onLang.push(() => { if (lb.open) lbShow(lbI); });
+
+/* page light + lit card borders follow the pointer */
+if (matchMedia('(pointer: fine)').matches){
+  addEventListener('pointermove', e => { root.style.setProperty('--gx', e.clientX + 'px'); root.style.setProperty('--gy', e.clientY + 'px'); }, { passive: true });
+  $$('.play').forEach(pl => pl.addEventListener('pointermove', e => { const r = pl.getBoundingClientRect(); pl.style.setProperty('--mx', (e.clientX - r.left) + 'px'); pl.style.setProperty('--my', (e.clientY - r.top) + 'px'); }));
+}
+
+/* chapter rail */
+const chaps = $$('.chap'), rail = $('#rail');
+function renderRail(){ rail.innerHTML = chaps.map(c => `<a href="#${c.id}" data-for="${c.id}">${esc(c.dataset[lang])}</a>`).join(''); markRail(); }
+let current = '';
+function markRail(){ rail.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.dataset.for === current)); }
+const railIO = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting){ current = e.target.id; markRail(); } }), { rootMargin: '-45% 0px -50% 0px' });
+chaps.forEach(c => railIO.observe(c));
+onLang.push(renderRail);
+
+/* ================= lightweight chart ================= */
+const RUNS = [
+  { n: 'Miyu', mem: 11.3, cpu: 0.04, me: 1 },
+  { n: 'codex', mem: 48.7, cpu: 0.71 },
+  { n: 'pi', mem: 77.0, cpu: 5.12 },
+  { n: 'Claude Code', mem: 130.1, cpu: 20.9 },
+  { n: 'opencode', mem: 245.2, cpu: 25.05 },
+  { n: 'dsh', mem: 340.1, cpu: 20.0 },
+];
+const METRICS = {
+  mem: { max: 360, ticks: [0, 100, 200, 300], unit: ' MiB', note: { zh: 'MiB · 空闲时的匿名内存', en: 'MiB · anonymous memory at idle' } },
+  cpu: { max: 27, ticks: [0, 5, 10, 15, 20, 25], unit: ' ms/s', note: { zh: 'ms/s · 空闲时每秒占用的 CPU 时间', en: 'ms/s · CPU time per second at idle' } },
+};
+let metric = 'mem', chartShown = reduce;
+const bars = $('#bars');
+// leave room for the widest value label after the bar
+const barSpan = () => { const t = bars.querySelector('.track'); return Math.max(40, t.clientWidth - Math.max(...[...bars.querySelectorAll('.val')].map(v => v.offsetWidth)) - 12); };
+function renderChart(){
+  const m = METRICS[metric];
+  $('#unit').textContent = L(m.note);
+  bars.innerHTML = RUNS.map((r, i) => `<div class="bar-row${r.me ? ' me' : ''}"><span class="nm">${esc(r.n)}</span><span class="track"><span class="bar" data-f="${r[metric] / m.max}" style="--d:${(i * .06).toFixed(2)}s"></span><span class="val">${r[metric]}${m.unit}</span></span></div>`).join('');
+  const s = barSpan();
+  $('#axis div').innerHTML = m.ticks.map(v => `<span style="left:${(v / m.max * s).toFixed(1)}px">${v}</span>`).join('');
+  growBars();
+}
+function growBars(){
+  if (!chartShown) return;
+  const s = barSpan();
+  requestAnimationFrame(() => requestAnimationFrame(() => bars.querySelectorAll('.bar').forEach(b => b.style.width = Math.max(2, b.dataset.f * s).toFixed(1) + 'px')));
+}
+const mBtns = $$('#metric button');
+mBtns.forEach(b => b.addEventListener('click', () => { metric = b.dataset.m; press(mBtns, b); renderChart(); }));
+onLang.push(renderChart);
+revealers.push(el => { if (el.closest('#c-light') && !chartShown){ chartShown = true; growBars(); } });
+let chartW = 0;
+new ResizeObserver(es => { const w = Math.round(es[0].contentRect.width); if (w !== chartW){ chartW = w; renderChart(); } }).observe(bars);
+
+/* ================= extreme load: five harnesses, same fake model and standard turn =================
+   line charts over load level; null = no data, 'x' = never came up, { v, est } = estimate */
+const EST = { zh: '内存不足 · 推算', en: 'out of memory · est.' };
+const DOWN = { zh: '没起来', en: 'didn’t start' };
+const REF = { zh: '参照', en: 'ref' };
+const ms = v => (v < 10 ? +v.toFixed(1) : Math.round(v)) + '';
+const DUEL = [
+  { t: { zh: '交互速度', en: 'Interaction speed' }, s: { zh: '四种压力下按键到字上屏，毫秒 · 越低越好', en: 'keypress to screen under four loads, ms · lower is better' },
+    x: [{ zh: '空载', en: 'Idle' }, { zh: 'CPU 超订', en: 'CPU ×16' }, { zh: '2000 线程', en: '2k threads' }, { zh: '全叠加', en: 'All at once' }],
+    xs: [{ zh: '空载', en: 'Idle' }, { zh: 'CPU', en: 'CPU' }, { zh: '线程', en: 'Thr' }, { zh: '叠加', en: 'All' }],
+    y: { log: 1, min: .05, max: 2500, ticks: [.1, 1, 10, 100, 1000] }, f: ms, ref: 'cat',
+    ser: { cat: [.1, 1.6, 72, .7], codex: [28, 503, 169, 203], opencode: [15, 90, 'x', 1314], dsh: [14, 39, 'x', 'x'], pi: [.8, 13, 93, 15], Miyu: [.7, 13, 77, 10] } },
+  { t: { zh: '多会话吞吐量', en: 'Multi-session throughput' }, s: { zh: '每秒完成几轮 · 越高越好', en: 'turns per second · higher is better' },
+    x: [{ zh: '50 个会话', en: '50 sessions' }, { zh: '200 个会话', en: '200 sessions' }],
+    xs: [{ zh: '50 个', en: '50' }, { zh: '200 个', en: '200' }],
+    y: { log: 1, min: 1, max: 400, ticks: [1, 10, 100] }, f: ms,
+    ser: { opencode: [2.6, 2.7], dsh: [16.7, 14.6], codex: [18.2, 16.7], pi: [117, { v: 120, est: 1 }], Miyu: [112, 165] } },
+  { t: { zh: '并行会话的内存占用', en: 'Memory with parallel sessions' }, s: { zh: '跑完歇着时 · 越少越好', en: 'idle after the run · lower is better' },
+    x: [{ zh: '50 个会话', en: '50 sessions' }, { zh: '200 个会话', en: '200 sessions' }],
+    xs: [{ zh: '50 个', en: '50' }, { zh: '200 个', en: '200' }],
+    y: { log: 1, min: 50, max: 25000, ticks: [100, 1000, 10000] }, f: v => v >= 1000 ? +(v / 1000).toFixed(1) + ' GB' : Math.round(v) + ' MB',
+    ser: { opencode: [692, 894], codex: [668, 965], dsh: [532, 762], pi: [3647, { v: 14588, est: 1 }], Miyu: [77, 219] } },
+  { t: { zh: '万轮会话处理速度', en: '10,000-turn session' }, s: { zh: '一个会话连跑 1 万轮，每步耗时，毫秒 · 越短越好', en: 'time per step, ms · lower is better' },
+    x: [{ zh: '开始', en: 'Start' }, { zh: '10 万', en: '100k' }, { zh: '17 万 token', en: '170k tokens' }],
+    xs: [{ zh: '开始', en: 'Start' }, { zh: '10 万', en: '100k' }, { zh: '17 万', en: '170k' }],
+    y: { min: 0, max: 100, ticks: [0, 25, 50, 75, 100] }, f: ms,
+    ser: { codex: [86, 83, 92], dsh: [27, 52, null], opencode: [26, 44, 64], pi: [5.6, 24, 30], Miyu: [3.3, 6.4, 12] } },
+];
+let duelShown = reduce;
+const mctx = document.createElement('canvas').getContext('2d');
+function textW(t, bold){ mctx.font = `${bold ? 700 : 500} 10.5px "Martian Mono", ui-monospace, monospace`; return mctx.measureText(t).width; }
+function lineChart(m, W){
+  const H = W < 440 ? 220 : 236, n = m.x.length;
+  const endTxt = (name, vals) => { const k = vals.findLastIndex(v => v != null); const v = vals[k];
+    return `${name === m.ref ? `${name} ${tx(REF)}` : name} ${v === 'x' ? tx(DOWN) : m.f(v.v ?? v)}`; };
+  const need = Math.max(...Object.entries(m.ser).map(([k, v]) => textW(endTxt(k, v), k === 'Miyu')), textW(tx(EST)));
+  const L = 34, Rg = Math.min(Math.ceil(need * 1.05) + 18, W * .5), T = 16, B = 30, pw = W - L - Rg, ph = H - T - B;
+  const inset = n > 2 ? 12 : 0;
+  const xl = m.xs && m.x.reduce((w, x) => w + textW(x[lang]) * 1.1 + 16, 0) > pw - 2 * inset ? m.xs : m.x;
+  const X = i => L + (n === 1 ? pw / 2 : inset + i * (pw - 2 * inset) / (n - 1));
+  const lg = Math.log10, Y = v => T + ph * (1 - (m.y.log ? (lg(v) - lg(m.y.min)) / (lg(m.y.max) - lg(m.y.min)) : (v - m.y.min) / (m.y.max - m.y.min)));
+  const tick = v => m.y.log && v >= 1000 ? v / 1000 + 'k' : v;
+  let g = `<g class="grid">${m.y.ticks.map(v => `<line x1="${L}" x2="${L + pw}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="tk" x="${L - 7}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end">${tick(v)}</text>`).join('')}`;
+  g += xl.map((x, i) => `<text class="tk" x="${X(i).toFixed(1)}" y="${H - 8}" text-anchor="${inset || n === 1 ? 'middle' : i === 0 ? 'start' : 'end'}">${esc(x[lang])}</text>`).join('') + '</g>';
+  const labs = [];
+  const sers = Object.entries(m.ser).map(([name, vals]) => {
+    const pts = vals.map((v, i) => v == null || v === 'x' ? null : { i, x: X(i), y: Y(v.v ?? v), v: v.v ?? v, est: !!v.est });
+    let path = '', est = '', prev = null;
+    pts.forEach(p => {
+      if (!p){ prev = null; return; }
+      if (prev){ const seg = `M${prev.x.toFixed(1)},${prev.y.toFixed(1)}L${p.x.toFixed(1)},${p.y.toFixed(1)}`; if (p.est) est += seg; else path += seg; }
+      prev = p;
+    });
+    const real = pts.filter(Boolean), last = real[real.length - 1];
+    const downs = vals.map((v, i) => v === 'x' ? i : -1).filter(i => i >= 0);
+    let body = `<path class="hit" d="${path}${est}"/><path class="ln" d="${path}"/>${est ? `<path class="ln est" d="${est}"/>` : ''}`;
+    body += real.map(p => `<circle class="pt${p.est ? ' est' : ''}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${name === 'Miyu' ? 3.4 : 2.6}"/><text class="pv" x="${p.x.toFixed(1)}" y="${(p.y - 7).toFixed(1)}" text-anchor="${n > 1 && p.i === n - 1 ? 'end' : n > 1 && p.i === 0 ? 'start' : 'middle'}">${esc(m.f(p.v))}</text>`).join('');
+    body += downs.map(i => `<text class="x" x="${X(i).toFixed(1)}" y="${T + 2}" text-anchor="middle">×</text>`).join('');
+    const endDown = downs.length && downs[downs.length - 1] > (last ? last.i : -1);
+    labs.push({ name, y: endDown ? T : last.y, from: endDown ? { x: X(downs[downs.length - 1]), y: T } : last, txt: endDown ? tx(DOWN) : m.f(last.v), note: last && last.est && !endDown });
+    return { name, body };
+  });
+  // end labels in the right gutter, nudged apart
+  const sorted = [...labs].sort((a, b) => a.y - b.y), gap = 13;
+  sorted.forEach((l, k) => { l.h = l.note ? gap * 2 - 2 : gap; if (k) l.y = Math.max(l.y, sorted[k - 1].y + sorted[k - 1].h); });
+  const over = sorted.length ? sorted[sorted.length - 1].y + sorted[sorted.length - 1].h - gap - (H - B) : 0;
+  if (over > 0) for (let k = sorted.length - 1; k >= 0; k--){ const lim = k === sorted.length - 1 ? H - B : sorted[k + 1].y - sorted[k].h; sorted[k].y = Math.min(sorted[k].y, lim); }
+  const lx = L + pw + 10;
+  const out = sers.map(sr => {
+    const l = labs.find(x => x.name === sr.name);
+    const lead = l.from && (Math.abs(l.from.y - l.y) > 1 || l.from.x < L + pw - 1) ? `<path class="lead" d="M${(l.from.x + 4).toFixed(1)},${l.from.y.toFixed(1)}L${(lx - 3).toFixed(1)},${l.y.toFixed(1)}"/>` : '';
+    const lab = `<text class="lab" x="${lx}" y="${(l.y + 3.5).toFixed(1)}">${esc(sr.name === m.ref ? `${sr.name} ${tx(REF)}` : sr.name)} ${esc(l.txt)}${l.note ? `<tspan class="nt" x="${lx}" dy="12">${esc(tx(EST))}</tspan>` : ''}</text>`;
+    return `<g class="ser${sr.name === 'Miyu' ? ' me' : sr.name === m.ref ? ' ref' : ''}" data-s="${esc(sr.name)}"><g class="plot">${sr.body}</g><g class="labs">${lead}${lab}</g></g>`;
+  }).join('');
+  return `<svg class="lc${duelShown ? ' shown' : ''}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(m.t[lang])}">${g}${out}</svg>`;
+}
+function renderDuel(){
+  const box = $('#duel');
+  if (!box.children.length || box.dataset.lang !== lang){
+    box.dataset.lang = lang;
+    box.innerHTML = DUEL.map((m, i) => `<div class="mt"><h4>${esc(m.t[lang])}<small>${esc(m.s[lang])}</small></h4><div class="lcw" data-i="${i}"></div></div>`).join('');
+  }
+  $$('#duel .lcw').forEach(w => { const W = Math.round(w.clientWidth); if (W && +w.dataset.w !== W){ w.dataset.w = W; w.innerHTML = lineChart(DUEL[+w.dataset.i], W); } });
+}
+function growDuel(){ if (duelShown) requestAnimationFrame(() => requestAnimationFrame(() => $$('#duel .lc').forEach(c => c.classList.add('shown')))); }
+// point at a line or its label to pick it out; tap on touch
+$('#duel').addEventListener('pointerover', e => {
+  const sv = e.target.closest('.lc'); if (!sv) return;
+  const sr = e.target.closest('.ser');
+  sv.classList.toggle('hl', !!sr); sv.querySelectorAll('.ser').forEach(x => x.classList.toggle('on', x === sr));
+});
+$('#duel').addEventListener('pointerleave', () => $$('#duel .lc').forEach(sv => { sv.classList.remove('hl'); sv.querySelectorAll('.ser.on').forEach(x => x.classList.remove('on')); }), true);
+onLang.push(renderDuel);
+revealers.push(el => { if (el.closest('#c-stress') && !duelShown){ duelShown = true; growDuel(); } });
+new ResizeObserver(renderDuel).observe($('#duel'));
+// label widths are measured in the web font, so redraw once it has loaded
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { $$('#duel .lcw').forEach(w => delete w.dataset.w); renderDuel(); growDuel(); }).catch(() => {});
+
+/* ================= shell recording ================= */
+const vid = $('#shellvid');
+if (reduce) vid.controls = true;
+else new IntersectionObserver(es => { es[0].isIntersecting ? vid.play().catch(() => { vid.controls = true; }) : vid.pause(); }, { threshold: .3 }).observe(vid);
+
+/* ================= personas: pick one, talk, and it remembers; switch away and back and it still knows ================= */
+const TONES = [
+  ['eng', { zh: '软件工程师', en: 'Software engineer' }],
+  ['friend', { zh: '温柔的朋友', en: 'Gentle friend' }],
+  ['cat', { zh: '猫娘', en: 'Catgirl' }],
+];
+const PSAY = [
+  { q: { zh: '我平时用 fish，命令别写成 bash 的', en: "I use fish. Don't give me bash syntax" },
+    mem: ['feedback', { zh: '写命令用 fish 语法，不用 bash', en: 'Write commands in fish syntax, not bash' }],
+    r: { eng: { zh: '好。以后命令都按 fish 写，比如用 set -x，不用 export。', en: 'Got it. Fish from now on: set -x, not export.' },
+         friend: { zh: '记下啦，以后给你的命令都用 fish 的写法。', en: "Noted. I'll write everything the fish way for you." },
+         cat: { zh: '知道了喵，以后只写 fish 的命令喵！', en: 'Got it, nya. Only fish commands from now on, nya!' } } },
+  { q: { zh: '我在写一个叫 tern 的终端小工具', en: "I'm building a little terminal tool called tern" },
+    mem: ['user', { zh: '在写终端小工具 tern', en: 'Building a terminal tool called tern' }],
+    r: { eng: { zh: '用什么语言？卡住了直接贴代码和报错。', en: 'Which language? If you get stuck, paste the code and the error.' },
+         friend: { zh: '听起来好有意思！写到哪一步了？', en: 'That sounds fun! How far along are you?' },
+         cat: { zh: '终端小工具！写好了给咱玩玩喵。', en: 'A terminal tool! Let me play with it when it is done, nya.' } } },
+  { q: { zh: '周六要考日语 N2，有点紧张', en: 'Japanese N2 exam on Saturday. A bit nervous' },
+    mem: ['episode', { zh: '11-15 周六考日语 N2', en: 'Japanese N2 exam on Sat, Nov 15' }],
+    r: { eng: { zh: '还有几天。每天一套真题，错题当天过一遍。', en: 'A few days left. One past paper a day, and go over the mistakes the same day.' },
+         friend: { zh: '紧张很正常，你准备了这么久，没问题的。', en: "Nerves are normal. You've prepared for ages, you'll be fine." },
+         cat: { zh: '加油喵！考完咱请你吃小鱼干喵！', en: 'You got this, nya! Fish snacks on me after, nya!' } } },
+];
+const PHELLO = {
+  episode: { eng: { zh: '早。周六的 N2 准备得怎么样？今天要不要过一遍语法？', en: 'Morning. How is N2 prep going? Want to run through grammar today?' },
+             friend: { zh: '早呀，离 N2 又近一天了，今天感觉怎么样？', en: 'Morning! One day closer to N2. How are you feeling?' },
+             cat: { zh: '早喵！N2 复习得怎么样了喵？', en: 'Morning, nya! How is N2 study going, nya?' } },
+  user: { eng: { zh: '早。tern 今天接着写哪一块？', en: 'Morning. Which part of tern are we on today?' },
+          friend: { zh: '早呀，tern 写得顺利吗？', en: 'Morning! Is tern going well?' },
+          cat: { zh: '早喵！tern 今天写到哪里了喵？', en: 'Morning, nya! Where is tern at today, nya?' } },
+  feedback: { eng: { zh: '早。今天跑什么？命令照旧按 fish 写。', en: 'Morning. What are we running? Fish syntax, as usual.' },
+              friend: { zh: '早呀，今天想做点什么？命令还是给你写 fish 的。', en: "Morning! What's on today? Commands stay fish for you." },
+              cat: { zh: '早喵！今天的命令也都写 fish 的喵～', en: 'Morning, nya! Fish commands again today, nya~' } },
+  none: { eng: { zh: '在。今天做什么？', en: 'Here. What are we doing today?' },
+          friend: { zh: '你好呀，今天过得怎么样？', en: 'Hi there, how is your day going?' },
+          cat: { zh: '喵，在的！', en: 'Nya, here!' } },
+};
+let tone = 'eng', pBusy = false;
+const pMem = { eng: [], friend: [], cat: [] };   // memory is kept per persona
+const pconvo = $('#pconvo');
+const pName = () => TONES.find(t => t[0] === tone)[1][lang];
+function renderPersona(){
+  $('#p-name').textContent = pName();
+  $('#ptone').innerHTML = TONES.map(([k, nm]) => `<button class="chip${k === tone ? ' on' : ''}" data-k="${k}">${esc(nm[lang])}</button>`).join('');
+  $('#ptone').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { if (pBusy || b.dataset.k === tone) return; tone = b.dataset.k; renderPersona(); pGreet(); }));
+  $('#pchips').innerHTML = PSAY.map((s, i) => `<button class="chip" data-i="${i}">${esc(s.q[lang])}</button>`).join('');
+  $('#pchips').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => say(+b.dataset.i)));
+  renderMems();
+}
+function renderMems(fresh = -1){
+  const m = pMem[tone];
+  $('#mems').innerHTML = m.length ? m.map(i => `<li${i === fresh ? ' class="new"' : ''}>${esc(PSAY[i].mem[1][lang])}</li>`).join('')
+    : `<li class="empty">${L({ zh: '还什么都没记。', en: 'Nothing yet.' })}</li>`;
+}
+const pBot = t => `<div class="bubble a">${esc(t)}</div>`;
+function pGreet(){
+  const kinds = pMem[tone].map(i => PSAY[i].mem[0]);
+  const k = ['episode', 'user', 'feedback'].find(x => kinds.includes(x)) || 'none';
+  pconvo.innerHTML = pBot(PHELLO[k][tone][lang]);
+}
+async function say(i){
+  if (pBusy) return; pBusy = true;
+  pconvo.insertAdjacentHTML('beforeend', `<div class="bubble u">${esc(PSAY[i].q[lang])}</div>`);
+  await sleep(reduce ? 0 : 550);
+  pconvo.insertAdjacentHTML('beforeend', pBot(PSAY[i].r[tone][lang]));
+  while (pconvo.children.length > 7) pconvo.firstElementChild.remove();
+  if (!pMem[tone].includes(i)){ pMem[tone].push(i); renderMems(i); }
+  pBusy = false;
+}
+onLang.push(() => { renderPersona(); pGreet(); });
+
+/* ================= presets: the real four, grouped the way the settings tree groups them ================= */
+const GROUPS = [
+  ['base', { zh: '基础系统', en: 'Base system' }, [['read', '读文件', 'Read files'], ['write', '新建文件', 'Write files'], ['edit', '编辑文件', 'Edit files'], ['grep', '搜内容', 'Search contents'], ['shell', '运行命令', 'Run commands'], ['subagent', '子代理', 'Subagents']]],
+  ['tasks', { zh: '任务和定时', en: 'Tasks and schedules' }, [['todowrite', '待办清单', 'To-do list'], ['cron_create', '定时任务', 'Scheduled tasks']]],
+  ['persona', { zh: '人格', en: 'Persona' }, [['remember', '人格记忆', 'Persona memory'], ['roleplay', '人设遵循提醒', 'Roleplay reminders']]],
+  ['research', { zh: '查资料', en: 'Research' }, [['web_search', '网络搜索', 'Web search'], ['web_fetch', '抓取网页', 'Fetch web pages'], ['kb_search', '知识库', 'Knowledge base']]],
+];
+const ALL = GROUPS.flatMap(g => g[2].map(t => t[0]));
+const PRESETS = [
+  ['full', { zh: '全部功能', en: 'Everything' }, ALL],
+  ['dev', { zh: '常规开发', en: 'Development' }, ALL.filter(k => k !== 'roleplay' && k !== 'kb_search')],
+  ['minimal', { zh: '极简开发', en: 'Minimal' }, ['read', 'write', 'edit', 'shell']],
+  ['none', { zh: '无功能', en: 'Nothing' }, []],
+];
+let pre = 'dev', on = new Set(PRESETS[1][2]);
+function renderPreset(){
+  $('#presets').innerHTML = PRESETS.map(([k, n]) => `<button data-k="${k}" aria-pressed="${k === pre}">${esc(n[lang])}</button>`).join('')
+    + `<button data-k="custom" aria-pressed="${pre === 'custom'}">${L({ zh: '自定义', en: 'Custom' })}</button>`;
+  $('#presets').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    const p = PRESETS.find(x => x[0] === b.dataset.k); pre = b.dataset.k; if (p) on = new Set(p[2]); renderPreset();
+  }));
+  $('#tools').innerHTML = GROUPS.map(([g, gn, ts]) => {
+    const n = ts.filter(t => on.has(t[0])).length, st = n === ts.length ? 'true' : n ? 'mixed' : 'false';
+    return `<div class="grp"><div class="grp-h"><span>${esc(gn[lang])}</span><button class="tg" role="switch" data-g="${g}" aria-checked="${st}" aria-label="${esc(gn[lang])}"></button></div><div class="tools">`
+      + ts.map(([k, zh, en]) => `<div class="tool"><span>${esc(lang === 'zh' ? zh : en)}</span><button class="tg" role="switch" data-k="${k}" aria-checked="${on.has(k)}" aria-label="${esc(lang === 'zh' ? zh : en)}"></button></div>`).join('') + '</div></div>';
+  }).join('');
+  $('#tools').querySelectorAll('.tg').forEach(t => t.addEventListener('click', () => {
+    if (t.dataset.g){ const ts = GROUPS.find(g => g[0] === t.dataset.g)[2].map(x => x[0]), all = ts.every(k => on.has(k)); ts.forEach(k => all ? on.delete(k) : on.add(k)); }
+    else { const k = t.dataset.k; on.has(k) ? on.delete(k) : on.add(k); }
+    pre = 'custom'; renderPreset();
+    $(`#tools .tg[data-${t.dataset.g ? 'g' : 'k'}="${t.dataset.g || t.dataset.k}"]`).focus();
+  }));
+  $('#loadtxt').textContent = L({ zh: `开了 ${on.size} / ${ALL.length} 项 · 关掉的不进提示词，模型看不到，也不占上下文`, en: `${on.size} / ${ALL.length} on · what's off never reaches the prompt, so it costs no context` });
+}
+onLang.push(renderPreset);
+
+/* ================= rendering: markdown streams in; tables, math and diagrams are drawn once their block closes ================= */
+const BLOCKS = [
+  { prose: 1, src: { zh: '## 本周进展', en: '## This week' }, html: { zh: '<h5>本周进展</h5>', en: '<h5>This week</h5>' } },
+  { prose: 1, src: { zh: '**完成**：输入框支持粘贴图片；**修复**：滚动抖动', en: '**Done**: paste images into the input; **Fixed**: scroll jitter' },
+    html: { zh: '<p><b>完成</b>：输入框支持粘贴图片；<b>修复</b>：滚动抖动</p>', en: '<p><b>Done</b>: paste images into the input; <b>Fixed</b>: scroll jitter</p>' } },
+  { src: { zh: '| 模块 | 进度 |\n|------|------|\n| 终端 | 90%  |\n| 网页 | 75%  |', en: '| part | progress |\n|------|----------|\n| tui  | 90%      |\n| web  | 75%      |' },
+    html: { zh: '<table><tr><th>模块</th><th>进度</th></tr><tr><td>终端</td><td><span class="pbar"><i style="width:90%"></i></span>90%</td></tr><tr><td>网页</td><td><span class="pbar"><i style="width:75%"></i></span>75%</td></tr></table>',
+            en: '<table><tr><th>part</th><th>progress</th></tr><tr><td>tui</td><td><span class="pbar"><i style="width:90%"></i></span>90%</td></tr><tr><td>web</td><td><span class="pbar"><i style="width:75%"></i></span>75%</td></tr></table>' } },
+  { src: { zh: '$$ e^{i\\pi} + 1 = 0 $$', en: '$$ e^{i\\pi} + 1 = 0 $$' }, html: { zh: '<div class="math">e<sup>iπ</sup> + 1 = 0</div>', en: '<div class="math">e<sup>iπ</sup> + 1 = 0</div>' } },
+  { src: { zh: '```mermaid\ngraph LR; 想法 --> 写码 --> 上线\n```', en: '```mermaid\ngraph LR; idea --> code --> ship\n```' },
+    html: { zh: flow(['想法', '写码', '上线']), en: flow(['idea', 'code', 'ship']) } },
+  { prose: 1, src: { zh: '```rust\nfn main() { println!("hi, miyu"); }\n```', en: '```rust\nfn main() { println!("hi, miyu"); }\n```' },
+    html: { zh: codeHTML(), en: codeHTML() } },
+];
+function flow(n){
+  return `<svg class="flow" viewBox="0 0 300 44" aria-hidden="true"><rect x="1" y="10" width="76" height="24" rx="3"/><path d="M77 22h33"/><path d="M105 18l5 4-5 4"/><rect x="111" y="10" width="76" height="24" rx="3"/><path d="M187 22h33"/><path d="M215 18l5 4-5 4"/><rect x="221" y="10" width="76" height="24" rx="3"/><text x="39" y="26" text-anchor="middle">${n[0]}</text><text x="149" y="26" text-anchor="middle">${n[1]}</text><text x="259" y="26" text-anchor="middle">${n[2]}</text></svg>`;
+}
+function codeHTML(){ return '<pre class="code"><span class="k">fn</span> <span class="f">main</span>() { <span class="f">println!</span>(<span class="s">"hi, miyu"</span>); }</pre>'; }
+const sbody = $('#sbody'), rmBtns = $$('#rmode button');
+let rmode = 'ren', streamGen = 0, streamed = 0;
+function blockEl(i, asSrc){
+  const b = BLOCKS[i], d = document.createElement('div');
+  if (asSrc){ d.className = 'blk src'; d.textContent = b.src[lang]; } else { d.className = 'blk ren'; d.innerHTML = b.html[lang]; }
+  return d;
+}
+function renderStatic(){ sbody.innerHTML = ''; for (let i = 0; i < streamed; i++) sbody.appendChild(blockEl(i, rmode === 'src')); }
+// Prose and code stream in already rendered, text node by text node. Tables, math and diagrams can only be drawn
+// once their block closes, so they stream as source and are swapped for the drawing when the closing line arrives.
+async function typeInto(d, gen){
+  const w = document.createTreeWalker(d, NodeFilter.SHOW_TEXT), nodes = [];
+  while (w.nextNode()) nodes.push([w.currentNode, w.currentNode.textContent]);
+  nodes.forEach(([n]) => { n.textContent = ''; });
+  for (const [n, t] of nodes) for (let k = 0; k < t.length; k += 2){
+    if (gen !== streamGen) return false;
+    n.textContent = t.slice(0, k + 2); await sleep(reduce ? 0 : 18);
+  }
+  return true;
+}
+async function stream(){
+  const gen = ++streamGen; streamed = 0; sbody.innerHTML = '';
+  for (let i = 0; i < BLOCKS.length; i++){
+    if (gen !== streamGen) return;
+    const asSrc = rmode === 'src' || !BLOCKS[i].prose, d = blockEl(i, asSrc);
+    d.classList.add('typing'); sbody.appendChild(d);
+    if (!await typeInto(d, gen)) return;
+    if (!asSrc || rmode === 'src'){ d.classList.remove('typing'); streamed = i + 1; await sleep(reduce ? 0 : 160); continue; }
+    await sleep(reduce ? 0 : 140);
+    if (gen !== streamGen) return;
+    streamed = i + 1;
+    const r = blockEl(i, false); r.classList.add('wipe'); d.replaceWith(r);
+    await sleep(reduce ? 0 : 260);
+  }
+}
+rmBtns.forEach(b => b.addEventListener('click', () => { rmode = b.dataset.v; press(rmBtns, b); renderStatic(); }));
+$('#replay').addEventListener('click', stream);
+onLang.push(() => { streamGen++; streamed = BLOCKS.length; renderStatic(); });
+revealers.push(el => { if (el.closest('#c-render') && el.classList.contains('play')) stream(); });
+
+/* ================= colours: follow the avatar, follow the wallpaper, or a fixed scheme ================= */
+const WPC = [['#20294a', '#5a6fb3', '#e8a87c'], ['#1d3a22', '#4f8a4b', '#d9e6b0'], ['#5b2533', '#c56a7f', '#f7d6cf'], ['#3a2a12', '#c58b2c', '#f2e3b6']];
+const AVC = [['#bfe9e2', '#1f8a7c'], ['#ffd9c7', '#d4573a'], ['#e3d6f5', '#6e4fa3'], ['#f8e9b5', '#b8860b']];
+const FIXED = {   // the shipped terminal / terminal-light theme files
+  term: { dark: { name: 'terminal', T: { bg: '#0c0c0c', fg: '#cccccc', dim: '#767676', acc: '#3b78ff', ter: '#16c60c', line: '#3a3a3a' } },
+          light: { name: 'terminal-light', T: { bg: '#ffffff', fg: '#1e1e1e', dim: '#8a8a8a', acc: '#0037da', ter: '#13a10e', line: '#d0d0d0' } } },
+};
+const CMODES = [['avatar', { zh: '跟随头像', en: 'Follow avatar' }], ['wall', { zh: '跟随壁纸', en: 'Follow wallpaper' }], ['term', { zh: '终端配色', en: 'Terminal colors' }]];
+let cmode = 'avatar', cAv = 0, cWp = 0, shade = 'light', shadeTouched = false, uiv = 'gui';
+function gradCanvas(cols, round){
+  const c = document.createElement('canvas'); c.width = c.height = 48; const x = c.getContext('2d');
+  if (round){ x.fillStyle = cols[0]; x.fillRect(0, 0, 48, 48); x.fillStyle = cols[1]; x.beginPath(); x.arc(24, 30, 15, 0, 7); x.fill(); x.beginPath(); x.arc(24, 14, 8, 0, 7); x.fill(); return c; }
+  const g = x.createLinearGradient(0, 0, 48, 48); cols.forEach((col, j) => g.addColorStop(j / (cols.length - 1), col)); x.fillStyle = g; x.fillRect(0, 0, 48, 48); return c;
+}
+function rgb2hsl(r, g, b){ r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+  if (mx !== mn){ const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+  return [h, s, l]; }
+const hsl = (h, s, l) => `hsl(${h.toFixed(0)} ${(s * 100).toFixed(0)}% ${(l * 100).toFixed(0)}%)`;
+function seedFrom(canvas){
+  const d = canvas.getContext('2d').getImageData(0, 0, 48, 48).data, bins = new Array(36).fill(0).map(() => ({ w: 0, s: 0, l: 0, h: 0 }));
+  for (let i = 0; i < d.length; i += 4){
+    const [h, s, l] = rgb2hsl(d[i], d[i + 1], d[i + 2]); if (l < .08 || l > .95) continue;
+    const w = s * (1 - Math.abs(l - .5) * 1.4); const b = bins[(h / 10) | 0];
+    b.w += w; b.s += s * w; b.l += l * w; b.h += h * w;
+  }
+  const best = bins.reduce((a, b) => b.w > a.w ? b : a);
+  if (!best.w) return [220, .2, .5];
+  return [best.h / best.w, Math.min(.85, best.s / best.w), best.l / best.w];
+}
+function fromSeed([h, s], dark){
+  const S = Math.max(.35, s);
+  return { name: `seed hsl(${h.toFixed(0)}, ${(s * 100).toFixed(0)}%)`,
+    P: dark ? { primary: hsl(h, S * .8, .78), secondary: hsl(h, .18, .72), tertiary: hsl((h + 60) % 360, S * .6, .76), surface: hsl(h, .12, .09), on: hsl(h, .1, .9), side: hsl(h, .14, .13), cont: hsl(h, S * .5, .26) }
+            : { primary: hsl(h, S * .75, .4), secondary: hsl(h, .16, .42), tertiary: hsl((h + 60) % 360, S * .5, .42), surface: hsl(h, .35, .975), on: hsl(h, .15, .12), side: hsl(h, .3, .93), cont: hsl(h, S * .7, .88) },
+    T: dark ? { bg: hsl(h, .22, .12), fg: hsl(h, .2, .86), dim: hsl(h, .12, .58), acc: hsl(h, Math.min(.9, S + .15), .72), ter: hsl((h + 60) % 360, S * .7, .7), line: hsl(h, .2, .3) }
+            : { bg: hsl(h, .3, .97), fg: hsl(h, .25, .18), dim: hsl(h, .1, .5), acc: hsl(h, S * .8, .42), ter: hsl((h + 60) % 360, S * .6, .38), line: hsl(h, .2, .82) } };
+}
+function scheme(){
+  const dark = shade === 'dark';
+  if (cmode === 'term') return FIXED.term[shade];
+  return fromSeed(seedFrom(cmode === 'avatar' ? gradCanvas(AVC[cAv], true) : gradCanvas(WPC[cWp])), dark);
+}
+function renderColor(){
+  $('#cmode').innerHTML = CMODES.filter(([k]) => k !== 'term' || uiv === 'tui').map(([k, n]) => `<button data-k="${k}" aria-pressed="${k === cmode}">${esc(n[lang])}</button>`).join('');
+  $('#cmode').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { cmode = b.dataset.k; renderColor(); }));
+  const csrc = $('#csrc');
+  if (cmode === 'avatar'){
+    csrc.innerHTML = `<span class="tiny">${L({ zh: '人格的头像', en: "the persona's avatar" })}</span><div class="cavs">` + AVC.map(([bg, fg], i) => `<button class="cav" data-i="${i}" aria-pressed="${i === cAv}" aria-label="${L({ zh: '头像', en: 'avatar' })} ${i + 1}" style="background:radial-gradient(circle at 50% 30%,${fg} 0 17%,transparent 18%),radial-gradient(circle at 50% 78%,${fg} 0 34%,transparent 35%),${bg}"></button>`).join('') + '</div>';
+    csrc.querySelectorAll('.cav').forEach(b => b.addEventListener('click', () => { cAv = +b.dataset.i; renderColor(); }));
+  } else if (cmode === 'wall'){
+    csrc.innerHTML = `<span class="tiny">${L({ zh: '桌面壁纸', en: 'desktop wallpaper' })}</span><div class="wps">` + WPC.map((c, i) => `<button class="wp" data-i="${i}" aria-pressed="${i === cWp}" aria-label="${L({ zh: '壁纸', en: 'wallpaper' })} ${i + 1}" style="background:linear-gradient(160deg,${c[0]},${c[1]} 55%,${c[2]})"></button>`).join('') + '</div>';
+    csrc.querySelectorAll('.wp').forEach(b => b.addEventListener('click', () => { cWp = +b.dataset.i; renderColor(); }));
+  } else csrc.innerHTML = `<span class="tiny">${L({ zh: '直接用终端自己的 16 色', en: "uses your terminal's own 16 colors" })}</span>`;
+  press($$('#shade button'), $(`#shade button[data-v="${shade}"]`));
+  applyScheme(scheme());
+}
+function applyScheme({ name, P, T }){
+  if (P){
+    const roles = [['primary', P.primary], ['secondary', P.secondary], ['tertiary', P.tertiary], ['surface', P.surface], ['on-surface', P.on]];
+    $('#pal').innerHTML = roles.map(([r, c]) => `<div><i style="background:${c}"></i><span>${r}</span></div>`).join('');
+    const app = $('#app'); app.style.background = P.surface; app.style.color = P.on; app.style.borderColor = P.side;
+    app.querySelector('[data-c="side"]').style.background = P.side;
+    app.querySelector('[data-c="sel"]').style.background = P.cont;
+    app.querySelector('[data-c="u"]').style.background = P.cont;
+    const a = app.querySelector('[data-c="a"]'); a.style.background = P.primary; a.style.color = P.surface;
+    const inp = app.querySelector('[data-c="in"]'); inp.style.border = `1px solid ${P.side}`; inp.style.background = P.surface;
+    app.querySelector('[data-c="send"]').style.background = P.primary;
+  }
+  if (uiv === 'tui') $('#pal').innerHTML = [['accent', T.acc], ['tertiary', T.ter], ['text', T.fg], ['dim', T.dim], ['background', T.bg]].map(([r, c]) => `<div><i style="background:${c}"></i><span>${r}</span></div>`).join('');
+  const tm = $('#tuim'); tm.style.background = T.bg; tm.style.color = T.fg; tm.style.borderColor = T.line;
+  tm.querySelectorAll('.tm-dim').forEach(e => e.style.color = T.dim);
+  tm.querySelectorAll('.tm-acc').forEach(e => e.style.color = T.acc);
+  tm.querySelector('.tm-dot').style.color = T.ter;
+  tm.querySelector('.tm-user').style.borderColor = T.acc;
+  tm.querySelector('.tm-in').style.borderColor = T.acc;
+  tm.querySelector('.tm-side').style.borderColor = T.line;
+  tm.querySelector('.tm-bar').style.borderColor = T.line; tm.querySelector('.tm-bar i').style.background = T.acc;
+  $('#seed').textContent = name;
+}
+const uiBtns = $$('#uiview button');
+uiBtns.forEach(b => b.addEventListener('click', () => {
+  press(uiBtns, b); uiv = b.dataset.v; $('#app').hidden = uiv === 'tui'; $('#tuim').hidden = uiv !== 'tui';
+  if (uiv === 'gui' && cmode === 'term') cmode = 'avatar';
+  $('#ui-cli code').textContent = uiv === 'tui' ? 'miyu tui' : 'miyu web';
+  renderColor();
+}));
+$$('#shade button').forEach(b => b.addEventListener('click', () => { shade = b.dataset.v; shadeTouched = true; renderColor(); }));
+const pageDark = () => matchMedia('(prefers-color-scheme: dark)').matches && root.dataset.theme !== 'light' || root.dataset.theme === 'dark';
+shade = pageDark() ? 'dark' : 'light';
+onLang.push(renderColor);
+
+/* ================= messaging ================= */
+const CHATS = [
+  { title: { zh: '和 Miyu 私聊', en: 'Miyu' }, sub: { zh: '你是管理员', en: "you're the owner" }, hint: { zh: '你发给它：', en: 'You send:' },
+    seed: [['me', '', { zh: '在吗', en: 'You there?' }], ['bot', '', { zh: '在。', en: 'Here.' }]],
+    acts: [
+      [{ zh: '帮我看看电脑现在怎么样', en: "How's my computer doing?" }, [['me'], ['wait', 1300], ['bot', '', { zh: '整体不错，内存 39/61G，磁盘 89%。N 卡驱动没加载上，回电脑前再修。', en: 'Solid: 39/61G RAM, disk 89%. The NVIDIA driver never loaded; fix it when you are back.' }]]],
+      [{ zh: '讲讲这个仓库的结构', en: 'Walk me through this repo' }, [['me'], ['wait', 1500], ['img']]],
+      [{ zh: '每天 9 点提醒我站会', en: 'Remind me of standup at 9 daily' }, [['me'], ['wait', 900], ['bot', '', { zh: '好，每天 9:00 在这里提醒你。', en: "OK, I'll ping you here every day at 9:00." }]]],
+      ['/clear', [['me'], ['wait', 500], ['sys', '', { zh: '上下文已清空，接下来是新的对话', en: 'Context cleared; a fresh conversation starts here' }]]],
+    ] },
+  { title: { zh: '技术交流群', en: 'Dev group' }, sub: { zh: '128 人', en: '128 members' }, hint: { zh: '在群里发生点什么：', en: 'Make something happen:' },
+    seed: [['other', { zh: '哲', en: 'Z' }, { zh: '周末有人去看展吗', en: 'Anyone going to the expo this weekend?' }]],
+    acts: [
+      [{ zh: '有人 @ 它问问题', en: 'Someone @-mentions it' }, [['other', { zh: '林', en: 'L' }, { zh: '@Miyu Rust 里 String 和 &str 有啥区别？', en: '@Miyu What is the difference between String and &str in Rust?' }], ['wait', 1300], ['bot', '', { zh: 'String 自己拥有一块堆内存，能改能变长；&str 只是借来看一段字符串。函数参数一般收 &str。', en: 'String owns its heap buffer and can grow; &str just borrows a view of some text. Functions usually take &str.' }]]],
+      [{ zh: '群友闲聊，没叫它', en: 'Small talk, nobody asks it' }, [['other', { zh: '哲', en: 'Z' }, { zh: '今晚谁来开黑', en: 'Who is up for a game tonight?' }], ['other', { zh: '宁', en: 'N' }, { zh: '我我我', en: 'Me!' }], ['wait', 900], ['sys', '', { zh: '判官：没人叫它，也不用插话。Miyu 保持安静', en: 'Judge: nobody asked and nothing to add. Miyu stays quiet' }]]],
+      [{ zh: '有人发广告', en: 'Someone posts spam' }, [['other', '?', { zh: '低价出售课程，加微信 xxxx', en: 'Cheap courses, DM me on xxxx' }], ['wait', 900], ['sys', '', { zh: 'Miyu 撤回了这条广告，并禁言发送者 10 分钟', en: 'Miyu removed the ad and muted the sender for 10 min' }]]],
+    ] },
+];
+const feed = $('#feed'), chatTabs = $$('#chat-tabs button'), platBtns = $$('#plat button');
+let chatI = 0, plat = 'qq', chatBusy = false, chatTouched = false;
+const face = who => who === 'bot' ? '<span class="face"><img src="assets/logo/old-disc-128.png" alt=""></span>' : `<span class="face">${esc(who)}</span>`;
+const tx = v => typeof v === 'string' ? v : v[lang];
+const RIMG = { zh: '<b>仓库结构</b><span>src/ · 核心代码，按模块分</span><span>docs/ · 设计文档和蓝图</span><span>resources/ · 提示词、预设</span><span>tests/ · 端到端测试</span>', en: '<b>Repo layout</b><span>src/ · core code, one dir per module</span><span>docs/ · designs and blueprints</span><span>resources/ · prompts, presets</span><span>tests/ · end-to-end tests</span>' };
+function rowHTML(k, who, t){
+  if (k === 'img'){
+    if (plat === 'tg') return `<div class="row bot">${face('bot')}<div class="bub"><small>Miyu</small><p>${esc(L({ zh: '分四块：src 是核心代码，docs 放设计文档，resources 放提示词和预设，tests 是端到端测试。', en: 'Four parts: src is the core, docs holds designs, resources holds prompts and presets, tests is end-to-end.' }))}</p></div></div>`;
+    return `<div class="row bot">${face('bot')}<div class="bub"><small>Miyu</small><div class="rimg">${RIMG[lang]}</div></div></div>`;
+  }
+  t = esc(t);
+  if (k === 'sys') return `<div class="sys">${t}</div>`;
+  if (k === 'bot') return `<div class="row bot">${face('bot')}<div class="bub"><small>Miyu</small><p>${t}</p></div></div>`;
+  if (k === 'me') return `<div class="row me">${face(L({ zh: '我', en: 'me' }))}<div class="bub"><p>${t}</p></div></div>`;
+  return `<div class="row other">${face(who)}<div class="bub"><p>${t}</p></div></div>`;
+}
+function renderChat(){
+  const c = CHATS[chatI];
+  $('#chat-title').textContent = tx(c.title); $('#chat-sub').textContent = tx(c.sub); $('#chat-hint').textContent = tx(c.hint);
+  $('#chat-plat').textContent = plat === 'tg' ? 'Telegram' : 'QQ';
+  chatTabs[1].hidden = plat === 'tg';
+  feed.innerHTML = c.seed.map(([k, w, t]) => rowHTML(k, tx(w), tx(t))).join('');
+  $('#chat-chips').innerHTML = c.acts.map(([label], i) => `<button class="chip${tx(label)[0] === '/' ? ' mono' : ''}" data-i="${i}">${esc(tx(label))}</button>`).join('');
+  $('#chat-chips').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { chatTouched = true; playAct(+b.dataset.i); }));
+}
+async function playAct(i){
+  if (chatBusy) return; chatBusy = true;
+  const [label, steps] = CHATS[chatI].acts[i];
+  for (const s of steps){
+    if (s[0] === 'wait'){
+      const d = document.createElement('div'); d.className = 'row bot';
+      d.innerHTML = `${face('bot')}<div class="bub"><span class="dots"><i></i><i></i><i></i></span></div>`;
+      feed.appendChild(d); await sleep(reduce ? 0 : s[1]); d.remove(); continue;
+    }
+    const text = s[0] === 'me' && !s[2] ? tx(label) : s[2] ? tx(s[2]) : '';
+    feed.insertAdjacentHTML('beforeend', rowHTML(s[0], s[1] ? tx(s[1]) : '', text));
+    while (feed.children.length > 9) feed.firstElementChild.remove();
+    await sleep(reduce ? 0 : 500);
+  }
+  chatBusy = false;
+}
+chatTabs.forEach(b => b.addEventListener('click', () => { if (chatBusy) return; chatI = +b.dataset.c; press(chatTabs, b); renderChat(); }));
+platBtns.forEach(b => b.addEventListener('click', () => {
+  if (chatBusy) return; plat = b.dataset.p; press(platBtns, b);
+  if (plat === 'tg' && chatI){ chatI = 0; press(chatTabs, chatTabs[0]); }
+  renderChat();
+}));
+onLang.push(() => { if (!chatBusy) renderChat(); });
+revealers.push(el => { if (el.closest('#c-im') && el.classList.contains('play')) setTimeout(() => { if (!chatTouched) playAct(0); }, 700); });
+
+/* ================= market ================= */
+function instLabel(b, s){ b.innerHTML = s === 'done' ? `<span lang="zh">卸载</span><span lang="en">remove</span>` : s === 'busy' ? `<span lang="zh">安装中</span><span lang="en">installing</span>` : `<span lang="zh">安装</span><span lang="en">install</span>`; }
+$$('.pkg[data-k]').forEach(p => {
+  const b = p.querySelector('.inst'); instLabel(b);
+  b.addEventListener('click', () => {
+    if (b.dataset.s === 'busy') return;
+    if (b.dataset.s === 'done'){ delete b.dataset.s; p.classList.remove('installed'); instLabel(b); if (p.dataset.k === 'theme'){ skin = 0; renderSkins(); } return; }
+    b.dataset.s = 'busy'; instLabel(b, 'busy');
+    setTimeout(() => { b.dataset.s = 'done'; instLabel(b, 'done'); p.classList.add('installed'); }, reduce ? 0 : 900);
+  });
+});
+const SKINS = [['mono', '#0d0e10', '#f6f7f8'], ['dusk', '#2b2140', '#e9c6ff'], ['sea', '#0f2a33', '#9fe3e0'], ['paper', '#f3ecdf', '#5b4636']];
+let skin = 0;
+function renderSkins(){
+  $('#skins').innerHTML = SKINS.map(([n, bg, fg], i) => `<button class="skin" data-i="${i}" aria-pressed="${i === skin}"><i style="background:linear-gradient(90deg,${bg} 60%,${fg} 60%)"></i>${n}</button>`).join('');
+  $('#skins').querySelectorAll('.skin').forEach(b => b.addEventListener('click', () => { skin = +b.dataset.i; renderSkins(); }));
+  const [, bg, fg] = SKINS[skin], pk = $('.pkg[data-k="theme"]');
+  pk.style.background = skin ? bg : ''; pk.style.color = skin ? fg : '';
+}
+renderSkins();
+const FACES = ['(๑•̀ㅂ•́)و✧', '(｡･ω･｡)', '(=^･ω･^=)', '٩(ˊᗜˋ*)و', '(￣▽￣)ノ'];
+let faceI = 0;
+$('#sticker').addEventListener('click', e => { faceI = (faceI + 1) % FACES.length; e.currentTarget.textContent = FACES[faceI]; });
+
+/* ================= language ================= */
+const langBtns = $$('nav .seg button[data-lang]');
+function setLang(l){
+  lang = l; root.dataset.lang = l; root.lang = l === 'zh' ? 'zh-CN' : 'en';
+  press(langBtns, langBtns.find(b => b.dataset.lang === l));
+  try { localStorage.setItem('miyu-lang', l); } catch (e) {}
+  onLang.forEach(f => f());
+}
+langBtns.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+
+/* ================= install: the bundle, or the core plus what you pick ================= */
+const SCRIPT = {
+  sh: 'curl -fsSL https://raw.githubusercontent.com/miyu-agent/miyu/main/packaging/install.sh | sh',
+  ps: '& ([scriptblock]::Create((irm https://raw.githubusercontent.com/miyu-agent/miyu/main/packaging/install.ps1)))',
+};
+const HEADS = [['tui', { zh: '终端界面', en: 'Terminal UI' }, 'miyu-tui'], ['web', { zh: '网页界面', en: 'Web UI' }, 'miyu-webui'], ['tray', { zh: '托盘', en: 'Tray app' }, 'miyu-applet']];
+const EXTRAS = [['miyu-im', { zh: '接入通讯平台', en: 'Messaging' }], ['miyu-memes', { zh: '表情包', en: 'Stickers' }], ['miyu-embed', { zh: '语义搜索', en: 'Semantic search' }], ['miyu-render', { zh: '渲染成图片', en: 'Render to images' }]];
+let os = 'linux', way = 'bundle';
+const picked = new Set(['tui']);
+const cmdHTML = c => `<div class="cmd"><code>${esc(c)}</code><button class="copy">copy</button></div>`;
+const altHTML = rows => `<ul class="alt">${rows.map(([t, c, link]) => `<li><span>${esc(L(t))}</span>${c ? `<code>${esc(c)}</code>` : ''}${link || ''}</li>`).join('')}</ul>`;
+function bundleHTML(){
+  const what = os === 'windows' ? { zh: '核心、终端界面、网页界面一次装齐。在 PowerShell 里运行：', en: 'Core, terminal UI and web UI in one go. Run it in PowerShell:' }
+    : { zh: '核心、终端界面、网页界面一次装齐：', en: 'Core, terminal UI and web UI in one go:' };
+  let h = `<p class="lead">${esc(L(what))}</p>` + cmdHTML(os === 'windows' ? SCRIPT.ps : SCRIPT.sh);
+  if (os === 'linux') h += altHTML([[{ zh: 'Arch Linux（AUR，含托盘）', en: 'Arch Linux (AUR, with the tray app)' }, 'paru -S miyu-agent']]);
+  if (os === 'macos') h += altHTML([[{ zh: 'Homebrew', en: 'Homebrew' }, 'brew install miyu-agent/miyu/miyu-agent'], [{ zh: '托盘', en: 'Tray app' }, 'brew install --cask miyu-agent/miyu/miyu-applet']]);
+  return h;
+}
+function pickHTML(){
+  const step = (n, t, body) => `<div class="step"><h4><i>${n}</i>${esc(L(t))}</h4>${body}</div>`;
+  const chip = (k, name, sub) => `<button class="chip${picked.has(k) ? ' on' : ''}" data-k="${k}" aria-pressed="${picked.has(k)}">${esc(L(name))}<span class="pk">${esc(sub)}</span></button>`;
+  const heads = os === 'windows' ? [] : HEADS;
+  const core = os === 'linux' ? cmdHTML('paru -S miyu-core') + `<p class="none">${esc(L({ zh: '这是 Arch Linux（AUR）的装法；别的发行版目前用整合包。', en: 'This is for Arch Linux (AUR); other distros use the bundle for now.' }))}</p>`
+    : os === 'macos' ? cmdHTML('brew install miyu-agent/miyu/miyu-core')
+    : cmdHTML(SCRIPT.ps) + `<p class="none">${esc(L({ zh: 'Windows 目前只有整合包，界面已经带上了，下一步只挑扩展。', en: 'Windows only has the bundle for now; the UIs come with it, so just pick extras next.' }))}</p>`;
+  const picks = `<div class="picks">`
+    + (heads.length ? `<span class="grp-n">${esc(L({ zh: '界面', en: 'Interfaces' }))}</span><div class="chips">${heads.map(([k, n, id]) => chip(k, n, id)).join('')}</div>` : '')
+    + `<span class="grp-n">${esc(L({ zh: '扩展', en: 'Extras' }))}</span><div class="chips">${EXTRAS.map(([id, n]) => chip(id, n, id)).join('')}</div></div>`;
+  const cmds = [];
+  const hs = heads.filter(([k]) => picked.has(k));
+  if (os === 'linux' && hs.length) cmds.push('paru -S ' + hs.map(h => h[2]).join(' '));
+  if (os === 'macos'){
+    const f = hs.filter(([k]) => k !== 'tray').map(h => 'miyu-agent/miyu/' + h[2]);
+    if (f.length) cmds.push('brew install ' + f.join(' '));
+    if (picked.has('tray')) cmds.push('brew install --cask miyu-agent/miyu/miyu-applet');
+  }
+  const ex = EXTRAS.filter(([id]) => picked.has(id)).map(e => e[0]);
+  if (ex.length) cmds.push('miyu pkg -S ' + ex.join(' '));
+  const run = cmds.length ? cmds.map(cmdHTML).join('') : `<p class="none">${esc(L({ zh: '什么都不选也能用：只用命令行，比如 miyu ask "你好"。', en: 'Nothing picked works too: just the command line, e.g. miyu ask "hi".' }))}</p>`;
+  return step(1, { zh: '装核心', en: 'Install the core' }, core) + step(2, { zh: '挑你要的', en: 'Pick what you want' }, picks) + step(3, { zh: '装上它们', en: 'Install them' }, run);
+}
+function renderSetup(){
+  $('#setup').innerHTML = way === 'bundle' ? bundleHTML() : pickHTML();
+  $('#setup').querySelectorAll('.chip[data-k]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.k; picked.has(k) ? picked.delete(k) : picked.add(k); renderSetup();
+    $(`#setup .chip[data-k="${k}"]`).focus();
+  }));
+}
+const osBtns = $$('#os button'), wayBtns = $$('#way button'), dlBtns = $$('#dl [data-os]');
+function setOS(o){
+  os = o; press(osBtns, osBtns.find(b => b.dataset.os === o));
+  dlBtns.forEach(b => b.classList.toggle('solid', b.dataset.os === o));
+  renderSetup();
+}
+osBtns.forEach(b => b.addEventListener('click', () => setOS(b.dataset.os)));
+wayBtns.forEach(b => b.addEventListener('click', () => { way = b.dataset.w; press(wayBtns, b); renderSetup(); }));
+dlBtns.forEach(b => b.addEventListener('click', () => setOS(b.dataset.os)));
+onLang.push(renderSetup);
+const ua = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent;
+setOS(/win/i.test(ua) ? 'windows' : /mac|iphone|ipad/i.test(ua) ? 'macos' : 'linux');
+$('#setup').addEventListener('click', async e => {
+  const b = e.target.closest('.copy'); if (!b) return;
+  try { await navigator.clipboard.writeText(b.previousElementSibling.textContent); b.textContent = 'copied'; }
+  catch (err) { getSelection().selectAllChildren(b.previousElementSibling); b.textContent = 'ctrl+c'; }
+  setTimeout(() => { b.textContent = 'copy'; }, 1600);
+});
+
+$$('.cli').forEach(b => b.addEventListener('click', async () => {
+  const cp = b.querySelector('.cp');
+  try { await navigator.clipboard.writeText(b.querySelector('code').textContent); cp.textContent = 'copied'; }
+  catch (e) { getSelection().selectAllChildren(b.querySelector('code')); cp.textContent = 'ctrl+c'; }
+  setTimeout(() => { cp.textContent = 'copy'; }, 1600);
+}));
+
+/* ================= glyph fields: hero logo, cursor trail ================= */
+// 220×220, one bit a cell: the old logo's silhouette (src/make_mask.sh)
+const N = 220, raw = atob('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////4AAAAAAAAAAAAAAAAAAAAAAAAAAAD////////8AAAAAAAAAAAAAAAAAAAAAAAAAAB//////////AAAAAAAAAAAAAAAAAAAAAAAAAA///////////AAAAAAAAAAAAAAAAAAAAAAAAAf///////////gAAAAAAAAAAAAAAAAAAAAAAAP////////////gAAAAAAAAAAAAAAAAAAAAAAD/////////////wAAAAAAAAAAAAAAAAAAAAAA//////////////wAAAAAAAAAAAAAAAAAAAAAP//////////////wAAAAAAAAAAAAAAAAAAAAD///////////////wAAAAAAAAAAAAAAAAAAAA////////////////gAAAAAAAAAAAAAAAAAAAP////////////////gAAAAAAAAAAAAAAAAAAD/////////////h///gAAAAAAAAAAAAAAAAAAf////////////8D///AAAAAAAAAAAAAAAAAAH/////////////z////AAAAAAAAAAAAAAAAAB/////////////+f///+AAAAAAAAAAAAAAAAAP/////////////58f//8AAAAAAAAAAAAAAAAB//////////////Hg///8AAAAAAAAAAAAAAAAf/////////////weB///4AAAAAAAAAAAAAAAD/n///////////+H4D///wAAAAAAAAAAAAAAA/8P///////////4/AH///gAAAAAAAAAAAAAAH/gf///////////nwAP///gAAAAAAAAAAAAAA/+gf//////////+eAA////AAAAAAAAAAAAAAH//g///////////x4AB///+AAAAAAAAAAAAAB//+B//////////8HgAD///8AAAAAAAAAAAAAP///H//////////x8AAP///4AAAAAAAAAAAAB//3+H/////////+PgAAf///wAAAAAAAAAAAAP/8f4P/////////5+AAA////gAAAAAAAAAAAB//gPgf/////////n4AAD////AAAAAAAAAAAAP/+A/x/////////+fAAAH///+AAAAAAAAAAAB//wB/H////wAf//w4AAAf///8AAAAAAAAAAAP//AB8H///w/gH/+PAAAB////4AAAAAAAAAAB//8AH8P//4f/8D/x+AAAD////wB/8AAAAAAAP//wAP4//+P//+D/P4AAAP////h//4AAAAAAB//+AAPj//j//AAB8+AAAA/////f//wAAAAAAP//4AA+H/4/+AAAARwAAAB////+AD/AAAAAAB///AAD+P/H8AAAAAPAAAAH///8AAD8AAAAAAP//8AAH8f48AAAAAB+AAAAf//+AAAPgAAAAAB///wAAHx/GAAAAAAPwAAAAf//gAAA+AAAAAAH///AAAfH4AAAAAAA+AAAAAf/4AAADwAAAAAA///8AAB/PAAAAAAADwAAAAA//AAAAPgAAAAAH///gAAD+QAAAAAAAPAAAAAB/wAAAA+AAAAAA///+AAAD4AAAAAAAA8AAAACH+AAAAD8AAAAAH///wAAAPAAAAAAAAPgAAAAMPwAAAAPgAAAAAf///AAAAYAAAAAAAB8AAAAAw+AAAAA+AAAAAD///8AAAAAAAAAAAAPwAAAADjwAAAAHwAAAAAf///4AAAAAAAAAAAA/AAAAAOOAAAAAeAAAAAD////gAAAAAAAAAAAD8AAAAA8wAAAAB8AAAAAP///8AAPgAAAAAAAAHgAAAAD2AAAAAHwAAAAB////wAB/AAAAAAAAAeAAAAAP/AAAAAfAAAAAP////AAP/AAAAAAAADwAAAAAf+AAAAD8AAAAA////8AB/EAAAAAAAAPAAAAABP8AAAAPgAAAAH////4APwAMAAAAAAA+AAAAAAf4AAAA8AAAAA/////wA8AAcAAAAAAD8AAAAAA/wAAADwAAAAD////+AHgAA4AAAAAAH+AAAAIDAAAAAPAAAAAf////gA8AAfwAAAAAAD/AAABgEAAAAB8AAAAB////4ADgAAPgAAAAAAP/gAAEAYAAAAPwAAAAP///+AAYAAAOAAAAAAAb/wABwAgAAAA+AAAAA////wABADAAcAAAAAAAP/8AeADAAAADwAAAAH///8AAMAYAA4AAAAAAAf///wAOAAAAPIAAAA////gABgDgABgAAAAAAAD///wAYAAAB+gAAAD///8AAEAOAADAAAAAAAAHf/+ABwAAAPzAAAAf///gAAgBgAAGAAAAAAAAA/8wAHgAAA/OAAAB///4AAAAGAAAIAAAAAAAABHnAAPAAADx4AAAP///gAAAAwAAAQAAAAAAAAAM4AA+AAAPPwAAA////wAAACAAAAAAAAAAAAAAHAAD8AAB+fAAAD//+fgAgAQAAAAAAAAAAAAAA8AAH4AAP5+AAAf//x/gEABAAAAAAAAAAAAAADgAAf4AB/P4AAB///A+AgAIAAAAAAAAAAAAAAeAAB5wAHx/wAAP///z+EAAAAAAAAAAAAAAAADwAAHzwAfP/AAA////H8wAAAAAAAAAAAAAAAAeAAAPDgB8/+AAH///+H+AAAAAAAAQAAAAAAAB4AAA8DgPz/4AAf////fwAAAAAAABAAAAAAAAPAAAD4Hh+f/wAB////8/AAAAAAAACAAAAAAAB8AAAPgH/x//AAP////44AAAAAAAAMAAAAAAAHgAAAfAP/f/8AA/////5AAAAAAAAAYAAAAAAA+AAAB8AP8//4AD/////gAAAAAAAABgAAAAAAHwAAAFwAPh//gAf/////CAAAAAAAADAAAAAAAeAAAAXgAAD//AB/////8AAAAAAAAAOAAAAAAD4AAABuAAAH/8AH/////gAAAAAAAAAYAAAAAAfAAAAG8AAAP/wA/////+IAAAAAAAABwAAAAAB8AAAAJwAAAP/gD/////xgAAAAAAAADAAAAAAPgAAAAnAAAAf+AP////+MAAAAAAAAAOAAAAAA+AAAACeAAAA/4A/////5wAAAgAAAAA4AAAAAHwAAAAI4AAAB/gH/////HAAACAAAAABwAAAAAfAAAAAzwAAAD/Af////44AAAIAAAAAHAAAAAD4AAAABPAAAAH8B/////ngAAAgAAAAAOAAAAAPgAAAAEcAAAAPwH////8cAAACAAAAAA4AAAAA+AAAAAR4AAAAfg/////zwAAAMAAAAADgAAAAD4AAAABHgAAAB+D////+fAAAAwAAAAAHAAAAAPgAAAAEPAAAAD4P////x4AAADAAAAAAcAAAAA/wAAAAY8AAAAHg/////PgAAAMAAAAAAwAAAAD/gAAABj4AAAAfD////5+AAAA4AAAAADgAACAH/AAAAGHgAAAA8f////nwAAAHgAAAAAOAAAIAP/gAAAIeAAAADx////8/AAAAPAAAAAAYAAAQAD/AAAAh8AAAAfH////z8AAAA8AACAABwAABgAP+AAACHwAAAP8f///+fwAAAD4AAMAADAAAGAAf/gAAIPgAAB/Z////5+AAAAPgAAQAAMAAAcAAH/AAAw+AAAP5n////v4AAAA/AABgAA4AAA4AAf+gADD8AAD/Of///8/gAAAD8AAHAABgAADwAAb/AAMP4AAfh5////z+AAAAHoAAOAAGAAAPgAAP+QAwfgAD+fv////fwQAAAegAA4AAMAAAfAAAf/gDB/AA/z+////9/BAAAB5EABwAAwAAB+AAAH/8MH8AH4f7////n8EAAAHgIAHwAFAAAH8AAAf//wP4Afn/////+fwwAAAOAwAPgAUAAAf4AAAD//A/gP8//////5/CAAAA4BgA/ABYAAA/gAAAH/8D/B/H//////n4IAAABwHAByAGgAAD+AAAAD/gP+H4//////+fhgAAAHAOADgAOAAAPAAAAHgcAf5/v//////9+GAAAAMAcAOAA4AAE4AAAAPgAB/nw///////34YAAAA4B4AcADgAATAAAAA/gAH//P///////fBgAAABgDwAwAOAABsAAAAD+AAL/5///////+8OAMAAGAGABgA4AAGAAAAAP8AAv8P////////w4AwAAMAMADADwAAIACAAA/wACf5/////////DgDAAAQAYAGAPAAAgAMAAL/AAE//////////8OAMAAAgAgAEA0AACAAwAAv8AAT//////////w4AwAABABAAADAAAIADgAG/wABn/////////+bwDgAAAAAAAAMAAAgAOAAb/AACP/////////5vAOAAAAAAAAAwAACAAwADn8AAMf/////////mcA4AAQAAAAADAAAIADgAOfwAA4/////////+Z4DwABgAAAAAOAAAgAOAB5/AABx/////////53gPAADAAAAAAwAACAAwAHn+AAHD/////////nOA+gAPAAAAADAAAAAHAA+f4AAeH////////+e8D5AA8AAAAAIAAAAAcAD9/gAA8P///f////99wP0Aj4AAAAAgAAAADwAvz+AAD4f//9/////3zg/ID/4AAAACAAAAAeAF/P4AAH4///n/////f3B+wH/gAAAAYAAAAB4A38/gAAfx//+f////+/gH9AP+AAAABAAAAAPAG/z/AAA/j//5/////7/4P8Af4AAAAEAAAAB4A3/H8AAD/H//n/////3/w/wB/AAAAAAAAAAPAG/8fwAAH+P/+f/////v/D/AP8AAAAAAAAAD8A3/5/AAAf8f/4///////+H4A/gAAAAAEAAAHgG//n8AAA/4//j///////8PgD4AAAAAAQAAAEgX/+PwAAD/x/8P///////8eAPgAAAAACAAAAOB//4/gAAH/j/w////////9wA+AAAAAAYAAAAwf//j+AAAf/P/D/////////AD8AAAAABBAAABD///H4AAA/+f8H////////4AP4AAAAAMEAAAGf//8fgAAB/4/wf////////iA/wAAAABgQAAAQP//w+AAAH/z+B////////+YD/gAAAAEBAAAAAH//D4AAAP/n4H////////xAP/AAAAAgEAAAD8H/+HgAAAf+PgP///////+MA/+AAAAEAwAAAP+P/4eAAAA/88A////////4wH/4AAAAADAAAA/+f/g8AAAD/7wD////////HAf/wAAAAAMAAAD/8//DwAAAH/nAH///////84B//gAAAAAwAAAN/7/8HAAAAP+cAf///////jgH//AAAAABAQAA5/3/wcIAAAf9gB///////8eAf//AAAAAEBAAB7///gwgAAA/2AD///////jwB//8AAAAAAEAAH///+DCAACB/YAP//////+fAH//4AAAAAAQAAf///8AIAAMD9AA///////z8AP//gAAAOABgAB////wAwAAYHwAB//////+fgA//+wAAB8AGAAH////gDAABwPAAH//////z+AD//7wAAf4AYAAf///+AMAADgcAAf/////+fwAP//vgAH/wBgAA////8AwAAPAwAA//////z/AA//+/AB//AGAAD////wDgAAeDAAD/////8f4AD//z+Af/+AcAAP////gOAAB4MAAH/////j/AAH//P8P//4BwAA/////A4AADwAAAf////8/8AAf/8/////gDAAB////8DgAAPAAAA/////H/gAJ//z////+AMAAH////4PAAA+AAAD////4/+AAn//P////4AwAAf////g8AAB4AAAP///+P/wACP/8/////ADgAA////+DwAAHgAAAf///x/+AAM//j////8GOAAD////4PAAAeAAAB///+P/4AAz/+P////wYYAAP////g+AAB4AAAD///h//AADH/4/////BhgAAeP//+D4AAHgAAAP//8P/8AAOf/D////8GHAAAAf//wPgAAeAAAAf//h//gAA4/8f////gQMAAAB///A/AAA4AAAB//8P/8AADz/j////yBAwAAAH//8D8AADAAAAD//h//wAAPH+P///8IMDgAAAP//wHwAAMAAAAH/4P/+EAA+Px////ggwGAAAA//+CfgAAgAAAAf/h//wgAD4/H///4CDAcAAAD//4J+AAGAAAAA/8P//CAAPx4////AIMAwAAAP//gn8AAQAAAAD/g//4YAA/jj///4AAwBAAAB//+GfwAAAAAAAH8H//BAAD/Mf//+ABDAGAAAB//4Z/gAAAAAAAPg//8MAAP+B///4AMMAMAAAH//Bj+AAAAAAAA8D//gwAA/8P///gAwwAQAAAP/8PP8AAAAAAABwf/8HAAD/x///8gHDABgAAA//w8/wAAAAAAACB//wYAAP+D///2AcEADAAAD/+Dz/gAAAAAAAAP/+DgAA/xn//+cAAQAEAAAD/4fH+AAAAAAAAA//4OAAD/PH//jwABgAIAAAH/h8f4AAAAAAAAH//B4AAP5/P/8OAAGAAAAAAP+H4/gAAAAAAAAf/4HAAA/H/P8B4AAIAAAAAAfw/j/AAAAAAAAB//g8AAB5//+AFgAAwAAAAAAfD+H8AAAAAAAAH/8DwAAGb//wADBgBAAAAAAAcP8PwAAAAAAAAf/wPAAAT///AAPOAGAAAAAAAh/wfAAAAAAAAA/+B8AAB///4AD/4AMAAAAAAAH/gcAAAAAAAAB/4HwAAH///gB//wAYAAAAAAA//AAAAAAAAAAD/geAAAf//8AP//AAgAAAAMAD/+AAAAAAAAAAH+B4AAA///gA//8ABgAAAD+AP/8AAAAAAAAAAPwPgAAD//+AP//wADAAAAP/h//4AAAAAAAAAAfA+AAAP//wD///gACAAAB/+H//4AAAAAAAAAA8D4AAA///Af//+AAAAAAH/4///AAAAAAAAAABwPgQAB//4H/f/4AAAAAA//j//4AAAAAAAAAADA+DAAH//g/5//wAAAAAH/8f//AAAAAAAAAAAED4MAAf/+P+Pv/AAAAAA//x//4AAAAAAAAAAAIPgwAB//x/x8/+AAAAAH//P//AAAAAAAAAAAAA+DAAD//P8Pz/4AAAAA//4//4AAAAAAAAAAAAD8MAAP/8/h+P4AAAAAD//n//AAAAAAAAAAAAAHw4AAf/x4P4/gAAAAAf/+f/4AAAAAAAAAAAAAfBgAB//HB/D+AAAAAD//x/+AAAAAAAAAAAAAB+GAAD/wAP8P4AAAAAP//P/wAAAAAAAAAAAAAD4cAAP+AB/g/gAAAAB//4/+AAAAAAAAAAAAAAHxwAAfwAH+D/AAAAAP//n/gAAAAAAAAAAAAAAPHgAC/AA/wf8AAAAB//8f8AAAAAAAAAAAAAAAOOAAN4AH/B/wAAAAH//z/AAAAAAAAAAAAAAAAc8AAfAA/4H/AAAAA//+P4AAAAAAAAAAAAAAAATwAB8AH/gf8AAAAD//5+AAAAAAAAAAAAAAAAAngADgA/8B/4AAAAf//HwAAAAAAAAAAAAAAAAAPAAOAD/wH/gAAAD//8cAAAAAAAAAAAAAAAAAAeAAYAf+Af+AAAAP//hAAAAAAAAAAAAAAAAAAA4ABAD/4B/4AAAB//8AAAAAAAAAAAAAAAAAAAA4AAAH/AH/gAAAP//gAAAAAAAAAAAAAAAAAAAAwAAAP8Af/AAAA//8AAAAAAAAAAAAAAAAAAAAAAAAAfgB/4AAAH//AAAAAAAAAAAAAAAAAAAAAAAAAA+AH+AAAA//wAAAAAAAAAAAAAAAAAAAAAAAAADwA/wAAAH/8AAAAAAAAAAAAAAAAAAAAAAAAAAHAD/AAAA//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8AAAH/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/gAAA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAA=');
+const bits = new Uint8Array(N * N);
+for (let i = 0; i < N * N; i++) bits[i] = (raw.charCodeAt(i >> 3) >> (7 - (i & 7))) & 1;
+const col = {};
+function readColors(){ const cs = getComputedStyle(root); for (const k of ['ink', 'mute', 'faint', 'paper']) col[k] = cs.getPropertyValue('--' + k).trim(); }
+function field(cv, opt){
+  const ctx = cv.getContext('2d');
+  const F = { W: 0, H: 0, cw: 0, cells: [], ripples: [], ptr: null, t0: performance.now(), visible: true };
+  F.layout = () => {
+    const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    F.W = r.width; F.H = r.height; if (!F.W) return;
+    cv.width = F.W * dpr; cv.height = F.H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cols = opt.cols(F.W); F.cw = F.W / cols;
+    const chh = F.cw * 1.5, rows = Math.floor(F.H / chh), oy = (F.H - rows * chh) / 2;
+    const cover = opt.cover(cols, rows, F.H, oy, chh);
+    F.cells = [];
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++){
+      const cov = cover(x, y), px = (x + .5) * F.cw, py = oy + (y + .5) * chh;
+      const kind = cov >= .5 ? 2 : cov > .12 ? 1 : 0, zone = opt.zone(px / F.W - .5, py / F.H - .5, x, y, cols, rows, oy, chh);
+      if (!zone && kind === 0) continue;
+      F.cells.push({ px, py, kind, zone, base: kind === 2 ? 'miyu'[(x + y * 3) % 4] : '·', g: rnd(SYMS), heat: 0,
+        settle: reduce || !opt.intro ? 0 : 250 + Math.hypot(px / F.W - .5, py / F.H - .5) * 1500 + Math.random() * 450 });
+    }
+    ctx.font = `500 ${(F.cw * 1.32).toFixed(2)}px "Martian Mono", ui-monospace, monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (opt.onLayout) opt.onLayout(cols, rows);
+  };
+  F.draw = now => {
+    if (!F.visible || !F.W) return;
+    const c0 = opt.colors(), t = now - F.t0;
+    if (F.ptr){ const R = F.W * opt.radius; for (const c of F.cells){ const d = Math.hypot(c.px - F.ptr.x, c.py - F.ptr.y); if (d < R) c.heat = Math.max(c.heat, 1 - d / R); } }
+    F.ripples = F.ripples.filter(r => { const rr = (now - r.t) * .55; if (rr > F.W * 1.2) return false;
+      for (const c of F.cells) if (Math.abs(Math.hypot(c.px - r.x, c.py - r.y) - rr) < F.cw * 2.2) c.heat = Math.max(c.heat, .95); return true; });
+    if (!reduce && Math.random() < .3){ const c = F.cells[(Math.random() * F.cells.length) | 0]; if (c && c.kind === 2) c.heat = Math.max(c.heat, .5); }
+    ctx.clearRect(0, 0, F.W, F.H);
+    for (const c of F.cells){
+      let ch, a = 1, color = c0.ink;
+      if (t < c.settle){ if (!c.zone) continue; if (Math.random() < .3) c.g = rnd(SYMS); ch = c.g; color = c0.faint; }
+      else if (c.heat > .06){ if (Math.random() < c.heat * .6) c.g = rnd(SYMS); ch = c.g; color = c.kind === 2 ? c0.mute : c0.ink;
+        a = c.kind === 0 ? c.heat * .6 : c.kind === 1 ? .45 + c.heat * .55 : 1; }
+      else { if (c.kind === 0) continue; ch = c.base; if (c.kind === 1) a = .4; }
+      ctx.globalAlpha = a; ctx.fillStyle = color; ctx.fillText(ch, c.px, c.py); c.heat *= .92;
+    }
+    ctx.globalAlpha = 1;
+  };
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  cv.addEventListener('pointermove', e => { F.ptr = pos(e); });
+  cv.addEventListener('pointerleave', () => { F.ptr = null; });
+  cv.addEventListener('pointerdown', e => { const p = pos(e); F.ripples.push({ ...p, t: performance.now() }); if (e.pointerType !== 'mouse') F.ptr = p; });
+  cv.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') F.ptr = null; });
+  new ResizeObserver(F.layout).observe(cv);
+  new IntersectionObserver(es => { F.visible = es[0].isIntersecting; }).observe(cv);
+  return F;
+}
+const heroField = field($('#glyphs'), {
+  cols: W => W < 380 ? 50 : W < 470 ? 60 : 72, radius: .13, intro: true,
+  zone: (dx, dy) => dx * dx + dy * dy < .25,
+  cover: (cols, rows, H, oy, chh) => (x, y) => {
+    let s = 0;
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++){
+      const u = Math.min(N - 1, ((x + (i + .5) / 3) / cols * N) | 0), v = Math.min(N - 1, (((oy + (y + (j + .5) / 3) * chh) / H) * N) | 0);
+      s += bits[v * N + u];
+    }
+    return s / 9;
+  },
+  colors: () => col,
+});
+/* faint code glyphs trailing the pointer across the page */
+const trail = $('#trail'), tctx = trail.getContext('2d'), hot = new Map(), TC = 14, TR = 22;
+let TW = 0, TH = 0;
+function sizeTrail(){ const d = Math.min(2, devicePixelRatio || 1); TW = innerWidth; TH = innerHeight; trail.width = TW * d; trail.height = TH * d; tctx.setTransform(d, 0, 0, d, 0, 0); tctx.font = '500 12px "Martian Mono", monospace'; tctx.textAlign = 'center'; tctx.textBaseline = 'middle'; }
+if (!reduce && matchMedia('(pointer: fine)').matches){
+  sizeTrail(); addEventListener('resize', sizeTrail);
+  addEventListener('pointermove', e => {
+    const ci = Math.floor(e.clientX / TC), cj = Math.floor(e.clientY / TR);
+    for (let dj = -1; dj <= 1; dj++) for (let di = -2; di <= 2; di++){
+      if (Math.random() < .55) continue;
+      hot.set(`${ci + di},${cj + dj}`, { i: ci + di, j: cj + dj, h: .9 - (Math.abs(di) + Math.abs(dj)) * .18, g: rnd(SYMS) });
+    }
+  }, { passive: true });
+}
+function drawTrail(){
+  if (!hot.size) return;
+  tctx.clearRect(0, 0, TW, TH); tctx.fillStyle = col.faint;
+  for (const [k, c] of hot){
+    c.h *= .93; if (c.h < .04){ hot.delete(k); continue; }
+    if (Math.random() < .2) c.g = rnd(SYMS);
+    tctx.globalAlpha = c.h; tctx.fillText(c.g, c.i * TC + TC / 2, c.j * TR + TR / 2);
+  }
+  tctx.globalAlpha = 1;
+  if (!hot.size) tctx.clearRect(0, 0, TW, TH);
+}
+function loop(now){ requestAnimationFrame(loop); if (document.hidden) return; heroField.draw(now); drawTrail(); }
+
+const themeChanged = () => { readColors(); if (!shadeTouched) shade = pageDark() ? 'dark' : 'light'; renderColor(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeChanged);
+new MutationObserver(themeChanged).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+
+let saved = null; try { saved = localStorage.getItem('miyu-lang'); } catch (e) {}
+readColors();
+setLang(saved === 'en' ? 'en' : 'zh');
+initiallyShown.forEach(el => revealers.forEach(f => f(el)));
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { heroField.layout(); }).catch(() => {});
+requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
